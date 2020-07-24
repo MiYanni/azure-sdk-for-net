@@ -58,16 +58,14 @@ namespace Azure.Messaging.ServiceBus.Amqp
                 case ArraySegment<byte> arraySegment when arraySegment.Count == arraySegment.Array?.Length:
                     return arraySegment.Array;
                 case ArraySegment<byte> arraySegment:
-                    {
-                        var byteArray = new byte[arraySegment.Count];
-                        Array.ConstrainedCopy(
-                            sourceArray: arraySegment.Array,
-                            sourceIndex: arraySegment.Offset,
-                            destinationArray: byteArray,
-                            destinationIndex: 0,
-                            length: arraySegment.Count);
-                        return byteArray;
-                    }
+                    var bytes = new byte[arraySegment.Count];
+                    Array.ConstrainedCopy(
+                        sourceArray: arraySegment.Array,
+                        sourceIndex: arraySegment.Offset,
+                        destinationArray: bytes,
+                        destinationIndex: 0,
+                        length: arraySegment.Count);
+                    return bytes;
                 default:
                     return null;
             }
@@ -85,8 +83,17 @@ namespace Azure.Messaging.ServiceBus.Amqp
             return new[] { data };
         }
 
-        private static IEnumerable<byte[]> GetDataViaDataBody(AmqpMessage message) =>
-            (message.DataBody ?? Enumerable.Empty<Data>()).Select(db => db.GetByteArray()).Where(ba => ba != null);
+        private static IEnumerable<byte[]> GetDataViaDataBody(AmqpMessage message)
+        {
+            foreach (Data data in (message.DataBody ?? Enumerable.Empty<Data>()))
+            {
+                byte[] bytes = data.GetByteArray();
+                if (bytes != null)
+                {
+                    yield return bytes;
+                }
+            }
+        }
 
         private static ServiceBusReceivedMessage ToServiceBusDataMessage(this AmqpMessage message)
         {

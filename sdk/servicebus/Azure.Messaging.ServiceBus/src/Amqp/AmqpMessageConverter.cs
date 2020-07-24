@@ -9,12 +9,12 @@ using System.Linq;
 using System.Runtime.Serialization;
 using Azure.Core;
 using Azure.Messaging.ServiceBus.Amqp.Framing;
+using Azure.Messaging.ServiceBus.Management;
+using Azure.Messaging.ServiceBus.Primitives;
 using Microsoft.Azure.Amqp;
 using Microsoft.Azure.Amqp.Encoding;
 using Microsoft.Azure.Amqp.Framing;
-using Azure.Messaging.ServiceBus.Primitives;
 using SBMessage = Azure.Messaging.ServiceBus.ServiceBusMessage;
-using Azure.Messaging.ServiceBus.Management;
 
 namespace Azure.Messaging.ServiceBus.Amqp
 {
@@ -349,7 +349,7 @@ namespace Azure.Messaging.ServiceBus.Amqp
             return sbMessage;
         }
 
-        public static AmqpMap GetRuleDescriptionMap(RuleDescription description)
+        public static AmqpMap GetRuleDescriptionMap(RuleProperties description)
         {
             var ruleDescriptionMap = new AmqpMap();
 
@@ -378,12 +378,12 @@ namespace Azure.Messaging.ServiceBus.Amqp
             return ruleDescriptionMap;
         }
 
-        public static RuleDescription GetRuleDescription(AmqpRuleDescriptionCodec amqpDescription)
+        public static RuleProperties GetRuleDescription(AmqpRuleDescriptionCodec amqpDescription)
         {
             var filter = GetFilter(amqpDescription.Filter);
             var ruleAction = GetRuleAction(amqpDescription.Action);
 
-            var ruleDescription = new RuleDescription(amqpDescription.RuleName, filter)
+            var ruleDescription = new RuleProperties(amqpDescription.RuleName, filter)
             {
                 Action = ruleAction
             };
