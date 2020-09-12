@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using Azure.Core;
+using Azure.Core.Serialization;
 using Azure.Messaging.EventHubs.Core;
 using Azure.Messaging.EventHubs.Diagnostics;
 
@@ -105,6 +106,11 @@ namespace Azure.Messaging.EventHubs.Producer
         private List<string> EventDiagnosticIdentifiers { get; } = new List<string>();
 
         /// <summary>
+        /// When adding messages to a batch, this serializer is used if it is not null.
+        /// </summary>
+        private ObjectSerializer Serializer { get; }
+
+        /// <summary>
         ///   Initializes a new instance of the <see cref="EventDataBatch"/> class.
         /// </summary>
         ///
@@ -123,9 +129,36 @@ namespace Azure.Messaging.EventHubs.Producer
         /// </remarks>
         ///
         internal EventDataBatch(TransportEventBatch transportBatch,
+            string fullyQualifiedNamespace,
+            string eventHubName,
+            SendEventOptions sendOptions) : this(transportBatch, fullyQualifiedNamespace, eventHubName, sendOptions, null)
+        {
+        }
+
+        /// <summary>
+        ///   Initializes a new instance of the <see cref="EventDataBatch"/> class.
+        /// </summary>
+        ///
+        /// <param name="transportBatch">The  transport-specific batch responsible for performing the batch operations.</param>
+        /// <param name="fullyQualifiedNamespace">The fully qualified Event Hubs namespace to use for instrumentation.</param>
+        /// <param name="eventHubName">The name of the specific Event Hub to associate the events with during instrumentation.</param>
+        /// <param name="sendOptions">The set of options that should be used when publishing the batch.</param>
+        /// <param name="serializer">When adding messages to a batch, this serializer is used if it is not null.</param>
+        ///
+        /// <remarks>
+        ///   As an internal type, this class performs only basic sanity checks against its arguments.  It
+        ///   is assumed that callers are trusted and have performed deep validation.
+        ///
+        ///   Any parameters passed are assumed to be owned by this instance and safe to mutate or dispose;
+        ///   creation of clones or otherwise protecting the parameters is assumed to be the purview of the
+        ///   caller.
+        /// </remarks>
+        ///
+        internal EventDataBatch(TransportEventBatch transportBatch,
                                 string fullyQualifiedNamespace,
                                 string eventHubName,
-                                SendEventOptions sendOptions)
+                                SendEventOptions sendOptions,
+                                ObjectSerializer serializer)
         {
             Argument.AssertNotNull(transportBatch, nameof(transportBatch));
             Argument.AssertNotNullOrEmpty(fullyQualifiedNamespace, nameof(fullyQualifiedNamespace));
@@ -136,6 +169,7 @@ namespace Azure.Messaging.EventHubs.Producer
             FullyQualifiedNamespace = fullyQualifiedNamespace;
             EventHubName = eventHubName;
             SendOptions = sendOptions;
+            Serializer = serializer;
         }
 
         /// <summary>
@@ -165,6 +199,30 @@ namespace Azure.Messaging.EventHubs.Producer
 
                 return added;
             }
+        }
+
+        /// <summary>
+        ///   Attempts to add an event to the batch, ensuring that the size
+        ///   of the batch does not exceed its maximum.
+        /// </summary>
+        ///
+        /// <param name="eventBody">Typed event body to use.</param>
+        /// <param name="eventData">The event to attempt to add to the batch. If null, a new EventData is created using eventBody.</param>
+        ///
+        /// <returns><c>true</c> if the event was added; otherwise, <c>false</c>.</returns>
+        ///
+        public bool TryAdd<T>(T eventBody, EventData eventData = null)
+        {
+            BinaryData binaryDataBody = new BinaryData(eventBody, Serializer, typeof(T));
+            // We replace BodyAsBinary so that all other event data properties are untouched.
+            if (eventData != null)
+            {
+                eventData.BodyAsBinary = binaryDataBody;
+                return TryAdd(eventData);
+            }
+
+            // We use this constructor so that extra allocations of BinaryData (that occur in other constructors) are not created.
+            return TryAdd(new EventData(binaryDataBody));
         }
 
         /// <summary>

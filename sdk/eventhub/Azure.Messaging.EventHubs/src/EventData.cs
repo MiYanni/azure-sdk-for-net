@@ -19,7 +19,7 @@ namespace Azure.Messaging.EventHubs
         /// <summary>
         /// The data associated with the event, in binary form.
         /// </summary>
-        public BinaryData BodyAsBinary { get; }
+        internal BinaryData BodyAsBinary { get; set; }
 
         /// <summary>
         ///   The data associated with the event.
@@ -225,7 +225,7 @@ namespace Azure.Messaging.EventHubs
         ///
         /// <param name="eventBody">The raw data as binary to use as the body of the event.</param>
         ///
-        public EventData(BinaryData eventBody) : this(eventBody, lastPartitionSequenceNumber: null)
+        internal EventData(BinaryData eventBody) : this(eventBody, lastPartitionSequenceNumber: null)
         {
         }
 

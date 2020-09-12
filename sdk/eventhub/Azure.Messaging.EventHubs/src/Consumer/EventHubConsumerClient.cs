@@ -14,6 +14,7 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using Azure.Core;
+using Azure.Core.Serialization;
 using Azure.Messaging.EventHubs.Core;
 using Azure.Messaging.EventHubs.Diagnostics;
 
@@ -104,6 +105,11 @@ namespace Azure.Messaging.EventHubs.Consumer
         /// </summary>
         ///
         private ConcurrentDictionary<string, TransportConsumer> ActiveConsumers { get; } = new ConcurrentDictionary<string, TransportConsumer>();
+
+        /// <summary>
+        /// The serializer to use for events of this client.
+        /// </summary>
+        private ObjectSerializer Serializer { get; set; }
 
         /// <summary>
         ///   Initializes a new instance of the <see cref="EventHubConsumerClient"/> class.
@@ -206,6 +212,7 @@ namespace Azure.Messaging.EventHubs.Consumer
             Connection = new EventHubConnection(connectionString, eventHubName, clientOptions.ConnectionOptions);
             ConsumerGroup = consumerGroup;
             RetryPolicy = clientOptions.RetryOptions.ToRetryPolicy();
+            Serializer = clientOptions.Serializer;
         }
 
         /// <summary>
@@ -235,6 +242,7 @@ namespace Azure.Messaging.EventHubs.Consumer
             Connection = new EventHubConnection(fullyQualifiedNamespace, eventHubName, credential, clientOptions.ConnectionOptions);
             ConsumerGroup = consumerGroup;
             RetryPolicy = clientOptions.RetryOptions.ToRetryPolicy();
+            Serializer = clientOptions.Serializer;
         }
 
         /// <summary>
@@ -257,6 +265,7 @@ namespace Azure.Messaging.EventHubs.Consumer
             Connection = connection;
             ConsumerGroup = consumerGroup;
             RetryPolicy = clientOptions.RetryOptions.ToRetryPolicy();
+            Serializer = clientOptions.Serializer;
         }
 
         /// <summary>
@@ -396,7 +405,7 @@ namespace Azure.Messaging.EventHubs.Consumer
                 {
                     transportConsumer = Connection.CreateTransportConsumer(ConsumerGroup, partitionId, startingPosition, RetryPolicy, readOptions.TrackLastEnqueuedEventProperties, readOptions.OwnerLevel, (uint)readOptions.PrefetchCount);
                     partitionContext = new PartitionContext(partitionId, transportConsumer);
-                    emptyPartitionEvent = new PartitionEvent(partitionContext, null);
+                    emptyPartitionEvent = new PartitionEvent(partitionContext, null, Serializer);
                 }
                 catch (Exception ex)
                 {
@@ -439,7 +448,7 @@ namespace Azure.Messaging.EventHubs.Consumer
                         cancellationToken.ThrowIfCancellationRequested<TaskCanceledException>();
 
                         emptyBatch = false;
-                        yield return new PartitionEvent(partitionContext, eventData);
+                        yield return new PartitionEvent(partitionContext, eventData, Serializer);
                     }
 
                     // If there were no events received, only emit an empty event if there was a maximum wait time
@@ -937,7 +946,7 @@ namespace Azure.Messaging.EventHubs.Consumer
 
                         foreach (EventData item in receivedItems)
                         {
-                            await channel.Writer.WriteAsync(new PartitionEvent(partitionContext, item), cancellationToken).ConfigureAwait(false);
+                            await channel.Writer.WriteAsync(new PartitionEvent(partitionContext, item, Serializer), cancellationToken).ConfigureAwait(false);
                             ++writtenItems;
                         }
 

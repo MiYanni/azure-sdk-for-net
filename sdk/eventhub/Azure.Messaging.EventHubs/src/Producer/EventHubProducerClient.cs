@@ -442,6 +442,76 @@ namespace Azure.Messaging.EventHubs.Producer
         ///   validated until this method is invoked.  The call will fail if the size of the specified set of events exceeds the maximum allowable size of a single batch.
         /// </summary>
         ///
+        /// <param name="eventBodies">The set of event data to send.</param>
+        /// <param name="eventBodyType">The type of the object in the eventBodies collection.</param>
+        /// <param name="eventData">If not null, the event data is cloned to create new EventData per event body.</param>
+        /// <param name="cancellationToken">An optional <see cref="CancellationToken" /> instance to signal the request to cancel the operation.</param>
+        ///
+        /// <returns>A task to be resolved on when the operation has completed.</returns>
+        ///
+        /// <exception cref="EventHubsException">
+        ///   Occurs when the set of events exceeds the maximum size allowed in a single batch, as determined by the Event Hubs service.  The <see cref="EventHubsException.Reason" /> will be set to
+        ///   <see cref="EventHubsException.FailureReason.MessageSizeExceeded"/> in this case.
+        /// </exception>
+        ///
+        /// <seealso cref="SendAsync(IEnumerable{EventData}, SendEventOptions, CancellationToken)" />
+        /// <seealso cref="SendAsync(EventDataBatch, CancellationToken)" />
+        /// <seealso cref="CreateBatchAsync(CancellationToken)" />
+        ///
+        public virtual async Task SendAsync(IEnumerable<object> eventBodies, Type eventBodyType, EventData eventData = null, CancellationToken cancellationToken = default) =>
+            // TODO: We cannot use <T> here because it makes the pre-existing IEnumerable<EventData> method ambiguous.
+            await SendAsync(eventBodies, eventBodyType, null, eventData, cancellationToken).ConfigureAwait(false);
+
+        /// <summary>
+        ///   Sends a set of events to the associated Event Hub using a batched approach.  Because the batch is implicitly created, the size of the event set is not
+        ///   validated until this method is invoked.  The call will fail if the size of the specified set of events exceeds the maximum allowable size of a single batch.
+        /// </summary>
+        ///
+        /// <param name="eventBodies">The set of event data to send.</param>
+        /// <param name="eventBodyType">The type of the object in the eventBodies collection.</param>
+        /// <param name="options">The set of options to consider when sending this batch.</param>
+        /// <param name="eventData">If not null, the event data is cloned to create new EventData per event body.</param>
+        /// <param name="cancellationToken">An optional <see cref="CancellationToken" /> instance to signal the request to cancel the operation.</param>
+        ///
+        /// <returns>A task to be resolved on when the operation has completed.</returns>
+        ///
+        /// <exception cref="EventHubsException">
+        ///   Occurs when the set of events exceeds the maximum size allowed in a single batch, as determined by the Event Hubs service.  The <see cref="EventHubsException.Reason" /> will be set to
+        ///   <see cref="EventHubsException.FailureReason.MessageSizeExceeded"/> in this case.
+        /// </exception>
+        ///
+        /// <seealso cref="SendAsync(IEnumerable{EventData}, CancellationToken)" />
+        /// <seealso cref="SendAsync(EventDataBatch, CancellationToken)" />
+        /// <seealso cref="CreateBatchAsync(CreateBatchOptions, CancellationToken)" />
+        ///
+        public virtual async Task SendAsync(IEnumerable<object> eventBodies, Type eventBodyType, SendEventOptions options, EventData eventData = null, CancellationToken cancellationToken = default)
+        {
+            // TODO: We cannot use <T> here because it makes the pre-existing IEnumerable<EventData> method ambiguous.
+            List<EventData> events = new List<EventData>();
+            foreach (object eventBody in eventBodies)
+            {
+                EventData eventDataToAdd;
+                BinaryData binaryDataBody = new BinaryData(eventBody, Options.Serializer, eventBodyType);
+                if (eventData != null)
+                {
+                    // TODO: This clone is making an unused BinaryData since it is replaced in the following call.
+                    eventDataToAdd = eventData.Clone();
+                    eventDataToAdd.BodyAsBinary = binaryDataBody;
+                }
+                else
+                {
+                    eventDataToAdd = new EventData(binaryDataBody);
+                }
+                events.Add(eventDataToAdd);
+            }
+            await SendAsync(events, options, cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        ///   Sends a set of events to the associated Event Hub using a batched approach.  Because the batch is implicitly created, the size of the event set is not
+        ///   validated until this method is invoked.  The call will fail if the size of the specified set of events exceeds the maximum allowable size of a single batch.
+        /// </summary>
+        ///
         /// <param name="eventBatch">The set of event data to send.</param>
         /// <param name="cancellationToken">An optional <see cref="CancellationToken" /> instance to signal the request to cancel the operation.</param>
         ///
@@ -490,8 +560,8 @@ namespace Azure.Messaging.EventHubs.Producer
 
             var events = eventSet switch
             {
-               IReadOnlyList<EventData> eventList => eventList,
-               _ => eventSet.ToList()
+                IReadOnlyList<EventData> eventList => eventList,
+                _ => eventSet.ToList()
             };
 
             if (events.Count == 0)
@@ -577,7 +647,7 @@ namespace Azure.Messaging.EventHubs.Producer
             AssertSinglePartitionReference(options.PartitionId, options.PartitionKey);
 
             TransportEventBatch transportBatch = await PartitionProducerPool.EventHubProducer.CreateBatchAsync(options, cancellationToken).ConfigureAwait(false);
-            return new EventDataBatch(transportBatch, FullyQualifiedNamespace, EventHubName, options);
+            return new EventDataBatch(transportBatch, FullyQualifiedNamespace, EventHubName, options, Options.Serializer);
         }
 
         /// <summary>

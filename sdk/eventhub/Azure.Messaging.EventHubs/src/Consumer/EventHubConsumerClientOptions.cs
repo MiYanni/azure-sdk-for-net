@@ -3,6 +3,7 @@
 
 using System.ComponentModel;
 using Azure.Core;
+using Azure.Core.Serialization;
 using Azure.Messaging.EventHubs.Core;
 
 namespace Azure.Messaging.EventHubs.Consumer
@@ -51,6 +52,11 @@ namespace Azure.Messaging.EventHubs.Consumer
         }
 
         /// <summary>
+        /// The serializer to use for events of this client.
+        /// </summary>
+        public ObjectSerializer Serializer { get; set; }
+
+        /// <summary>
         ///   Determines whether the specified <see cref="System.Object" /> is equal to this instance.
         /// </summary>
         ///
@@ -89,7 +95,8 @@ namespace Azure.Messaging.EventHubs.Consumer
             new EventHubConsumerClientOptions
             {
                 _connectionOptions = ConnectionOptions.Clone(),
-                _retryOptions = RetryOptions.Clone()
+                _retryOptions = RetryOptions.Clone(),
+                Serializer = Serializer
             };
     }
 }

@@ -78,27 +78,30 @@ namespace Azure.Messaging.EventHubs.Samples
             RecordSchema exampleSchema = (RecordSchema)Schema.Parse(
                 "{\"type\":\"record\",\"name\":\"Message\",\"namespace\":\"ExampleSchema\",\"fields\":[{\"name\":\"Message\",\"type\":\"string\"}]}");
 
+            // Create an options for the client to provide the serializer required.
+            EventHubProducerClientOptions producerOptions = new EventHubProducerClientOptions { Serializer = avroSerializer };
+
+            // Create an options for the client to provide the serializer required.
+            EventHubConsumerClientOptions consumerOptions = new EventHubConsumerClientOptions { Serializer = avroSerializer };
+
             // To start, we'll publish a small number of events using a producer client.  To ensure that our client is appropriately closed, we'll
             // take advantage of the asynchronous dispose when we are done or when an exception is encountered.
 
-            await using (var producerClient = new EventHubProducerClient(fullyQualifiedNamespace, eventHubName, credential))
+            await using (var producerClient = new EventHubProducerClient(fullyQualifiedNamespace, eventHubName, credential, producerOptions))
             {
                 using EventDataBatch eventBatch = await producerClient.CreateBatchAsync();
 
                 GenericRecord firstEventRecord = new GenericRecord(exampleSchema);
                 firstEventRecord.Add("Message", "Hello, Event Hubs!");
-                EventData firstEvent = new EventData(new BinaryData(firstEventRecord, avroSerializer, typeof(GenericRecord)));
-                eventBatch.TryAdd(firstEvent);
+                eventBatch.TryAdd(firstEventRecord);
 
                 GenericRecord secondEventRecord = new GenericRecord(exampleSchema);
                 secondEventRecord.Add("Message", "The middle event is this one");
-                EventData secondEvent = new EventData(new BinaryData(secondEventRecord, avroSerializer, typeof(GenericRecord)));
-                eventBatch.TryAdd(secondEvent);
+                eventBatch.TryAdd(secondEventRecord);
 
                 GenericRecord thirdEventRecord = new GenericRecord(exampleSchema);
                 thirdEventRecord.Add("Message", "Goodbye, Event Hubs!");
-                EventData thirdEvent = new EventData(new BinaryData(thirdEventRecord, avroSerializer, typeof(GenericRecord)));
-                eventBatch.TryAdd(thirdEvent);
+                eventBatch.TryAdd(thirdEventRecord);
 
                 await producerClient.SendAsync(eventBatch);
 
@@ -127,7 +130,7 @@ namespace Azure.Messaging.EventHubs.Samples
             // In this example, we will create our consumer client using the default consumer group that is created with an Event Hub.
             // Our consumer will begin watching the partition at the very end, reading only new events that we will publish for it.
 
-            await using (var consumerClient = new EventHubConsumerClient(EventHubConsumerClient.DefaultConsumerGroupName, fullyQualifiedNamespace, eventHubName, credential))
+            await using (var consumerClient = new EventHubConsumerClient(EventHubConsumerClient.DefaultConsumerGroupName, fullyQualifiedNamespace, eventHubName, credential, consumerOptions))
             {
                 // To ensure that we do not wait for an indeterminate length of time, we'll stop reading after we receive three events.  For a
                 // fresh Event Hub, those will be the three that we had published.  We'll also ask for cancellation after 30 seconds, just to be
@@ -141,8 +144,7 @@ namespace Azure.Messaging.EventHubs.Samples
 
                 await foreach (PartitionEvent partitionEvent in consumerClient.ReadEventsAsync(cancellationSource.Token))
                 {
-                    BinaryData binaryData = partitionEvent.Data.BodyAsBinary;
-                    GenericRecord eventRecord = binaryData.ToObject<GenericRecord>(avroSerializer);
+                    GenericRecord eventRecord = partitionEvent.GetDataBody<GenericRecord>();
                     string messageText = (string)eventRecord["Message"];
                     Console.WriteLine($"Event Read: { messageText }");
                     eventsRead++;
@@ -162,26 +164,24 @@ namespace Azure.Messaging.EventHubs.Samples
             // To start, we'll publish a small number of events using a producer client.  To ensure that our client is appropriately closed, we'll
             // take advantage of the asynchronous dispose when we are done or when an exception is encountered.
 
-            await using (var producerClient = new EventHubProducerClient(fullyQualifiedNamespace, eventHubName, credential))
+            await using (var producerClient = new EventHubProducerClient(fullyQualifiedNamespace, eventHubName, credential, producerOptions))
             {
-                List<EventData> events = new List<EventData>();
+                List<GenericRecord> records = new List<GenericRecord>();
 
                 GenericRecord firstEventRecord = new GenericRecord(exampleSchema);
                 firstEventRecord.Add("Message", "Hello, Event Hubs!");
-                EventData firstEvent = new EventData(new BinaryData(firstEventRecord, avroSerializer, typeof(GenericRecord)));
-                events.Add(firstEvent);
+                records.Add(firstEventRecord);
 
                 GenericRecord secondEventRecord = new GenericRecord(exampleSchema);
                 secondEventRecord.Add("Message", "The middle event is this one");
-                EventData secondEvent = new EventData(new BinaryData(secondEventRecord, avroSerializer, typeof(GenericRecord)));
-                events.Add(secondEvent);
+                records.Add(secondEventRecord);
 
                 GenericRecord thirdEventRecord = new GenericRecord(exampleSchema);
                 thirdEventRecord.Add("Message", "Goodbye, Event Hubs!");
-                EventData thirdEvent = new EventData(new BinaryData(thirdEventRecord, avroSerializer, typeof(GenericRecord)));
-                events.Add(thirdEvent);
+                records.Add(thirdEventRecord);
 
-                await producerClient.SendAsync(events);
+                // TODO: We cannot use <T> here because it makes the pre-existing IEnumerable<EventData> method ambiguous.
+                await producerClient.SendAsync(records, typeof(GenericRecord));
 
                 Console.WriteLine("The event batch has been published.");
             }
@@ -208,7 +208,7 @@ namespace Azure.Messaging.EventHubs.Samples
             // In this example, we will create our consumer client using the default consumer group that is created with an Event Hub.
             // Our consumer will begin watching the partition at the very end, reading only new events that we will publish for it.
 
-            await using (var consumerClient = new EventHubConsumerClient(EventHubConsumerClient.DefaultConsumerGroupName, fullyQualifiedNamespace, eventHubName, credential))
+            await using (var consumerClient = new EventHubConsumerClient(EventHubConsumerClient.DefaultConsumerGroupName, fullyQualifiedNamespace, eventHubName, credential, consumerOptions))
             {
                 // To ensure that we do not wait for an indeterminate length of time, we'll stop reading after we receive three events.  For a
                 // fresh Event Hub, those will be the three that we had published.  We'll also ask for cancellation after 30 seconds, just to be
@@ -222,8 +222,7 @@ namespace Azure.Messaging.EventHubs.Samples
 
                 await foreach (PartitionEvent partitionEvent in consumerClient.ReadEventsAsync(cancellationSource.Token))
                 {
-                    BinaryData binaryData = partitionEvent.Data.BodyAsBinary;
-                    GenericRecord eventRecord = binaryData.ToObject<GenericRecord>(avroSerializer);
+                    GenericRecord eventRecord = partitionEvent.GetDataBody<GenericRecord>();
                     string messageText = (string)eventRecord["Message"];
                     Console.WriteLine($"Event Read: { messageText }");
                     eventsRead++;

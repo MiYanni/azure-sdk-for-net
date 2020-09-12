@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using Azure.Core;
+using Azure.Core.Serialization;
 
 namespace Azure.Messaging.EventHubs.Consumer
 {
@@ -37,19 +38,41 @@ namespace Azure.Messaging.EventHubs.Consumer
         public EventData Data { get; }
 
         /// <summary>
+        /// The serializer to use for deserializing event data.
+        /// </summary>
+        internal ObjectSerializer Serializer { get; }
+
+        /// <summary>
+        /// Gets the event's data body, deserializing it into type of T.
+        /// </summary>
+        /// <typeparam name="T">The type to use for deserialization.</typeparam>
+        /// <returns>The event's data body as T.</returns>
+        public T GetDataBody<T>() => Data.BodyAsBinary.ToObject<T>(Serializer);
+
+        /// <summary>
         ///   Initializes a new instance of the <see cref="PartitionEvent"/> structure.
         /// </summary>
-        ///
         /// <param name="partition">The Event Hub partition that the <paramref name="data" /> is associated with.</param>
         /// <param name="data">The event that was read, if events were available; otherwise, <c>null</c>.</param>
-        ///
-        public PartitionEvent(PartitionContext partition,
-                              EventData data)
+        /// <param name="serializer">The serializer to use for deserializing event data.</param>
+        internal PartitionEvent(PartitionContext partition,
+            EventData data,
+            ObjectSerializer serializer)
         {
             Argument.AssertNotNull(partition, nameof(partition));
 
             Partition = partition;
             Data = data;
+            Serializer = serializer;
+        }
+
+        /// <summary>
+        ///   Initializes a new instance of the <see cref="PartitionEvent"/> structure.
+        /// </summary>
+        /// <param name="partition">The Event Hub partition that the <paramref name="data" /> is associated with.</param>
+        /// <param name="data">The event that was read, if events were available; otherwise, <c>null</c>.</param>
+        public PartitionEvent(PartitionContext partition, EventData data) : this(partition, data, null)
+        {
         }
     }
 }
