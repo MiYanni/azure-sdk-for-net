@@ -6,6 +6,9 @@ using System.Globalization;
 
 namespace Azure.Messaging.ServiceBus.Administration
 {
+    /// <summary>
+    /// Constants used by Administration client.
+    /// </summary>
     internal class AdministrationClientConstants
     {
         public const int QueueNameMaximumLength = 260;

@@ -13,6 +13,10 @@ namespace Azure.Messaging.ServiceBus.Administration
     /// </summary>
     public class AuthorizationRules : List<AuthorizationRule>, IEquatable<AuthorizationRules>
     {
+        /// <summary>
+        /// Creates an XML representation of the AuthorizationRules.
+        /// </summary>
+        /// <returns>The XElement that represents the AuthorizationRules.</returns>
         internal XElement Serialize()
         {
             var rules = new XElement(
@@ -22,6 +26,10 @@ namespace Azure.Messaging.ServiceBus.Administration
             return rules;
         }
 
+        /// <summary>
+        /// Creates a clone of AuthorizationRules.
+        /// </summary>
+        /// <returns>The cloned AuthorizationRules.</returns>
         internal AuthorizationRules Clone()
         {
             var rules = new AuthorizationRules();
@@ -32,8 +40,16 @@ namespace Azure.Messaging.ServiceBus.Administration
             return rules;
         }
 
+        /// <summary>
+        /// The constructor for AuthorizationRules for internal use only.
+        /// </summary>
         internal AuthorizationRules() { }
 
+        /// <summary>
+        /// Creates an AuthorizationRules based on an XML representation.
+        /// </summary>
+        /// <param name="xElement">The XElement that represents an AuthorizationRules.</param>
+        /// <returns>The AuthorizationRules created from the XElement.</returns>
         internal static AuthorizationRules ParseFromXElement(XElement xElement)
         {
             var rules = new AuthorizationRules();
@@ -95,7 +111,7 @@ namespace Azure.Messaging.ServiceBus.Administration
             return true;
         }
 
-        /// <summary></summary>
+        /// <summary>Compares two AuthorizationRules to each other for equality.</summary>
         public static bool operator ==(AuthorizationRules left, AuthorizationRules right)
         {
             if (ReferenceEquals(left, right))
@@ -111,7 +127,7 @@ namespace Azure.Messaging.ServiceBus.Administration
             return left.Equals(right);
         }
 
-        /// <summary></summary>
+        /// <summary>Compares two AuthorizationRules to each other for inequality.</summary>
         public static bool operator !=(AuthorizationRules left, AuthorizationRules right)
         {
             return !(left == right);

@@ -343,7 +343,7 @@ namespace Azure.Messaging.ServiceBus.Administration
             return false;
         }
 
-        /// <summary></summary>
+        /// <summary>Compares two CreateQueueOptions for equality.</summary>
         public static bool operator ==(CreateQueueOptions left, CreateQueueOptions right)
         {
             if (ReferenceEquals(left, right))
@@ -359,7 +359,7 @@ namespace Azure.Messaging.ServiceBus.Administration
             return left.Equals(right);
         }
 
-        /// <summary></summary>
+        /// <summary>Compares two CreateQueueOptions for inequality.</summary>
         public static bool operator !=(CreateQueueOptions left, CreateQueueOptions right)
         {
             return !(left == right);

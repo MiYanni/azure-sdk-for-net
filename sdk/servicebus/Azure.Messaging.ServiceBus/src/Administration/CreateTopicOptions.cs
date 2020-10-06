@@ -231,7 +231,7 @@ namespace Azure.Messaging.ServiceBus.Administration
             return false;
         }
 
-        /// <summary></summary>
+        /// <summary>Compares two CreateTopicOptions for equality.</summary>
         public static bool operator ==(CreateTopicOptions left, CreateTopicOptions right)
         {
             if (ReferenceEquals(left, right))
@@ -247,7 +247,7 @@ namespace Azure.Messaging.ServiceBus.Administration
             return left.Equals(right);
         }
 
-        /// <summary></summary>
+        /// <summary>Compares two CreateTopicOptions for inequality.</summary>
         public static bool operator !=(CreateTopicOptions left, CreateTopicOptions right)
         {
             return !(left == right);

@@ -10,8 +10,19 @@ using System.Xml.Linq;
 
 namespace Azure.Core.Pipeline
 {
+    /// <summary>
+    /// The client for interacting with diagnostics and telemetry information.
+    /// </summary>
     internal sealed partial class ClientDiagnostics
     {
+        /// <summary>
+        /// Partial method that can optionally be defined to extract the error
+        /// message, code, and details in a service specific manner.
+        /// </summary>
+        /// <param name="content">The error content.</param>
+        /// <param name="message">The error message.</param>
+        /// <param name="errorCode">The error code.</param>
+        /// <param name="additionalInfo">Additional error details.</param>
         partial void ExtractFailureContent(
             string? content,
             ref string? message,

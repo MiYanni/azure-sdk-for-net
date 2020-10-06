@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Xml.Linq;
 
 namespace Azure.Messaging.ServiceBus.Administration
@@ -13,10 +12,17 @@ namespace Azure.Messaging.ServiceBus.Administration
     /// </summary>
     public abstract class AuthorizationRule : IEquatable<AuthorizationRule>
     {
+        /// <summary>
+        /// Creates an AuthorizationRule for internal construction only.
+        /// </summary>
         internal AuthorizationRule()
         {
         }
 
+        /// <summary>
+        /// Clones an AuthorizationRule.
+        /// </summary>
+        /// <returns>A cloned AuthorizationRule.</returns>
         internal abstract AuthorizationRule Clone();
 
         /// <summary>Gets or sets the claim type.</summary>
@@ -47,6 +53,11 @@ namespace Azure.Messaging.ServiceBus.Administration
         /// <summary>Determines whether the specified object is equal to the current object.</summary>
         public abstract bool Equals(AuthorizationRule other);
 
+        /// <summary>
+        /// Creates an AuthorizationRule based on an XElement.
+        /// </summary>
+        /// <param name="xElement">The XML element representing the AuthorizationRule.</param>
+        /// <returns>An AuthorizationRule created from the XML element data.</returns>
         internal static AuthorizationRule ParseFromXElement(XElement xElement)
         {
             XAttribute attribute = xElement.Attribute(XName.Get("type", AdministrationClientConstants.XmlSchemaInstanceNamespace));
@@ -64,6 +75,10 @@ namespace Azure.Messaging.ServiceBus.Administration
             }
         }
 
+        /// <summary>
+        /// Creates an XML representation of AuthorizationRule.
+        /// </summary>
+        /// <returns>The XElement that represents the AuthorizationRule.</returns>
         internal abstract XElement Serialize();
 
         /// <inheritdoc/>

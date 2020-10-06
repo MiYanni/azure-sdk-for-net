@@ -1,21 +1,23 @@
 ﻿// Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-using System.IO;
-using Azure.Core;
 using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
 using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Azure.Messaging.ServiceBus.Authorization;
-using Azure.Messaging.ServiceBus.Primitives;
+using Azure.Core;
 using Azure.Core.Pipeline;
-using System.Collections.Generic;
-using System.Globalization;
+using Azure.Messaging.ServiceBus.Authorization;
 
 namespace Azure.Messaging.ServiceBus.Administration
 {
+    /// <summary>
+    /// Sends and receives HTTP request and response information.
+    /// </summary>
     internal class HttpRequestAndResponse
     {
         private readonly HttpPipeline _pipeline;
