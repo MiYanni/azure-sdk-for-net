@@ -9,9 +9,9 @@ using System.Threading.Tasks;
 
 namespace Azure.Messaging.ServiceBus.Stress
 {
-    public class MessageLockRenewalTest : StressTest<MessageLockRenewalTest.MessageLockRenewalOptions, MessageLockRenewalTest.MessageLockRenewalMetrics>
+    public class MessageLockRenewal2Test : StressTest<MessageLockRenewal2Test.MessageLockRenewal2Options, MessageLockRenewal2Test.MessageLockRenewal2Metrics>
     {
-        public MessageLockRenewalTest(MessageLockRenewalOptions options, MessageLockRenewalMetrics metrics)
+        public MessageLockRenewal2Test(MessageLockRenewal2Options options, MessageLockRenewal2Metrics metrics)
             : base(options, metrics)
         {
         }
@@ -70,37 +70,14 @@ namespace Azure.Messaging.ServiceBus.Stress
 
         private async Task Receiver(ServiceBusClient client, CancellationToken cancellationToken)
         {
-            TaskCompletionSource<bool> tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-
-            async Task Receive(ProcessMessageEventArgs args)
-            {
-                await Task.Delay(TimeSpan.FromMilliseconds(Random.Next(0, Options.MaxReceiveDelayMs)), cancellationToken).ConfigureAwait(false);
-                _ = Convert.ToInt32(args.Message.Body.ToString());
-                await args.CompleteMessageAsync(args.Message).ConfigureAwait(false);
-                tcs.SetResult(true);
-            }
-
-            async Task Error(ProcessErrorEventArgs args)
-            {
-                await Task.CompletedTask.ConfigureAwait(false);
-                Metrics.Exceptions.Enqueue(args.Exception);
-                tcs.SetResult(true);
-            }
-
-            var processor = client.CreateProcessor(QueueName);
-            processor.ProcessMessageAsync += Receive;
-            processor.ProcessErrorAsync += Error;
-
+            var receiver = client.CreateReceiver(QueueName);
             while (!cancellationToken.IsCancellationRequested)
             {
                 try
                 {
-                    //await processor.Receive(cancellationToken);
-                    await processor.StartProcessingAsync().ConfigureAwait(false);
-                    await tcs.Task.ConfigureAwait(false);
-                    await processor.StopProcessingAsync().ConfigureAwait(false);
+                    var message = await receiver.ReceiveMessageAsync().ConfigureAwait(false);
+                    _ = Convert.ToInt32(message.Body.ToString());
                     Interlocked.Increment(ref Metrics.Receives);
-                    tcs.SetResult(false);
                 }
                 catch (Exception e) when (!ContainsOperationCanceledException(e))
                 {
@@ -109,44 +86,7 @@ namespace Azure.Messaging.ServiceBus.Stress
             }
         }
 
-        //private async Task Receive(ProcessMessageEventArgs args)
-        //{
-        //    await Task.Delay(TimeSpan.FromMilliseconds(Random.Next(0, Options.MaxReceiveDelayMs))).ConfigureAwait(false);
-        //    Convert.ToInt32(args.Message.Body.ToString());
-        //    await args.CompleteMessageAsync(args.Message).ConfigureAwait(false);
-        //}
-
-        //// Simulates method in SDK
-        //private async Task Send(int index, CancellationToken cancellationToken)
-        //{
-        //    await Task.Delay(TimeSpan.FromMilliseconds(Random.Next(0, Options.MaxSendDelayMs)), cancellationToken);
-        //    var d = Random.NextDouble();
-        //    if (d < Options.SendExceptionRate)
-        //    {
-        //        throw new SendException(d.ToString());
-        //    }
-        //    else
-        //    {
-        //        await _channel.Writer.WriteAsync(index, cancellationToken);
-        //    }
-        //}
-
-        //// Simulates method in SDK
-        //private async Task Receive(CancellationToken cancellationToken)
-        //{
-        //    await Task.Delay(TimeSpan.FromMilliseconds(Random.Next(0, Options.MaxReceiveDelayMs)), cancellationToken);
-        //    var d = Random.NextDouble();
-        //    if (d < Options.ReceiveExceptionRate)
-        //    {
-        //        throw new ReceiveException(d.ToString());
-        //    }
-        //    else
-        //    {
-        //        await _channel.Reader.ReadAsync(cancellationToken);
-        //    }
-        //}
-
-        public class MessageLockRenewalOptions : StressOptions
+        public class MessageLockRenewal2Options : StressOptions
         {
             [Option("maxSendDelayMs", Default = 50, HelpText = "Max send delay (in milliseconds)")]
             public int MaxSendDelayMs { get; set; }
@@ -164,33 +104,11 @@ namespace Azure.Messaging.ServiceBus.Stress
             public double ReceiveExceptionRate { get; set; }
         }
 
-        public class MessageLockRenewalMetrics : StressMetrics
+        public class MessageLockRenewal2Metrics : StressMetrics
         {
             public long Sends;
             public long Receives;
             public long Unprocessed => (Interlocked.Read(ref Sends) - Interlocked.Read(ref Receives));
         }
-
-        //public class SendException : Exception
-        //{
-        //    public SendException()
-        //    {
-        //    }
-
-        //    public SendException(string message) : base(message)
-        //    {
-        //    }
-        //}
-
-        //public class ReceiveException : Exception
-        //{
-        //    public ReceiveException()
-        //    {
-        //    }
-
-        //    public ReceiveException(string message) : base(message)
-        //    {
-        //    }
-        //}
     }
 }

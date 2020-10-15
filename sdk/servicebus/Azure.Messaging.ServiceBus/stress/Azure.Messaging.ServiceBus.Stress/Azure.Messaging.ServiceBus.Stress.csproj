@@ -3,6 +3,7 @@
     <TargetFrameworks>netcoreapp2.0;netstandard2.0</TargetFrameworks>
     <OutputType>Exe</OutputType>
     <NoWarn>$(NoWarn);1591</NoWarn>
+    <GenerateProgramFile>false</GenerateProgramFile>
   </PropertyGroup>
 
   <ItemGroup>
