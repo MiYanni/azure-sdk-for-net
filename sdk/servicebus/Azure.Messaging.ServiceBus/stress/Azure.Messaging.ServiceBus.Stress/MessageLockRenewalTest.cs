@@ -9,9 +9,9 @@ using System.Threading.Tasks;
 
 namespace Azure.Messaging.ServiceBus.Stress
 {
-    public class MessageLockRenewal2Test : StressTest<MessageLockRenewal2Test.MessageLockRenewal2Options, MessageLockRenewal2Test.MessageLockRenewal2Metrics>
+    public class MessageLockRenewalTest : StressTest<MessageLockRenewalTest.MessageLockRenewal2Options, MessageLockRenewalTest.MessageLockRenewal2Metrics>
     {
-        public MessageLockRenewal2Test(MessageLockRenewal2Options options, MessageLockRenewal2Metrics metrics)
+        public MessageLockRenewalTest(MessageLockRenewal2Options options, MessageLockRenewal2Metrics metrics)
             : base(options, metrics)
         {
         }
