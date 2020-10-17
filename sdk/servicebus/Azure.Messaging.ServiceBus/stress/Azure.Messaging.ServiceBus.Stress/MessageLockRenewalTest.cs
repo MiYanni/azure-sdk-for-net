@@ -9,9 +9,9 @@ using System.Threading.Tasks;
 
 namespace Azure.Messaging.ServiceBus.Stress
 {
-    public class MessageLockRenewalTest : StressTest<MessageLockRenewalTest.MessageLockRenewal2Options, MessageLockRenewalTest.MessageLockRenewal2Metrics>
+    public class MessageLockRenewalTest : StressTest<MessageLockRenewalTest.MessageLockRenewalOptions, MessageLockRenewalTest.MessageLockRenewalMetrics>
     {
-        public MessageLockRenewalTest(MessageLockRenewal2Options options, MessageLockRenewal2Metrics metrics)
+        public MessageLockRenewalTest(MessageLockRenewalOptions options, MessageLockRenewalMetrics metrics)
             : base(options, metrics)
         {
         }
@@ -75,6 +75,7 @@ namespace Azure.Messaging.ServiceBus.Stress
             {
                 try
                 {
+                    await Task.Delay(TimeSpan.FromMilliseconds(Random.Next(0, Options.MaxReceiveDelayMs)), cancellationToken).ConfigureAwait(false);
                     var message = await receiver.ReceiveMessageAsync().ConfigureAwait(false);
                     _ = Convert.ToInt32(message.Body.ToString());
                     Interlocked.Increment(ref Metrics.Receives);
@@ -86,7 +87,7 @@ namespace Azure.Messaging.ServiceBus.Stress
             }
         }
 
-        public class MessageLockRenewal2Options : StressOptions
+        public class MessageLockRenewalOptions : ServiceBusStressOptions
         {
             [Option("maxSendDelayMs", Default = 50, HelpText = "Max send delay (in milliseconds)")]
             public int MaxSendDelayMs { get; set; }
@@ -96,15 +97,9 @@ namespace Azure.Messaging.ServiceBus.Stress
 
             [Option("receivers", Default = 3, HelpText = "Number of receivers")]
             public int Receivers { get; set; }
-
-            [Option("sendExceptionRate", Default = .01, HelpText = "Rate of send exceptions")]
-            public double SendExceptionRate { get; set; }
-
-            [Option("receiveExceptionRate", Default = .02, HelpText = "Rate of receive exceptions")]
-            public double ReceiveExceptionRate { get; set; }
         }
 
-        public class MessageLockRenewal2Metrics : StressMetrics
+        public class MessageLockRenewalMetrics : StressMetrics
         {
             public long Sends;
             public long Receives;

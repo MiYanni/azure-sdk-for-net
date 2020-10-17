@@ -9,8 +9,8 @@
 using System.Diagnostics.CodeAnalysis;
 
 [assembly: SuppressMessage("Globalization", "CA1305:Specify IFormatProvider", Justification = "<Pending>", Scope = "member", Target = "~M:Azure.Messaging.ServiceBus.Stress.MessageLockRenewalTest.Receive(Azure.Messaging.ServiceBus.ProcessMessageEventArgs)~System.Threading.Tasks.Task")]
-[assembly: SuppressMessage("Design", "CA1034:Nested types should not be visible", Justification = "<Pending>", Scope = "type", Target = "~T:Azure.Messaging.ServiceBus.Stress.MessageLockRenewalTest.MessageLockRenewal2Options")]
-[assembly: SuppressMessage("Design", "CA1034:Nested types should not be visible", Justification = "<Pending>", Scope = "type", Target = "~T:Azure.Messaging.ServiceBus.Stress.MessageLockRenewalTest.MessageLockRenewal2Metrics")]
-[assembly: SuppressMessage("Design", "CA1051:Do not declare visible instance fields", Justification = "<Pending>", Scope = "member", Target = "~F:Azure.Messaging.ServiceBus.Stress.MessageLockRenewalTest.MessageLockRenewal2Metrics.Sends")]
-[assembly: SuppressMessage("Design", "CA1051:Do not declare visible instance fields", Justification = "<Pending>", Scope = "member", Target = "~F:Azure.Messaging.ServiceBus.Stress.MessageLockRenewalTest.MessageLockRenewal2Metrics.Receives")]
+[assembly: SuppressMessage("Design", "CA1034:Nested types should not be visible", Justification = "<Pending>", Scope = "type", Target = "~T:Azure.Messaging.ServiceBus.Stress.MessageLockRenewalTest.MessageLockRenewalOptions")]
+[assembly: SuppressMessage("Design", "CA1034:Nested types should not be visible", Justification = "<Pending>", Scope = "type", Target = "~T:Azure.Messaging.ServiceBus.Stress.MessageLockRenewalTest.MessageLockRenewalMetrics")]
+[assembly: SuppressMessage("Design", "CA1051:Do not declare visible instance fields", Justification = "<Pending>", Scope = "member", Target = "~F:Azure.Messaging.ServiceBus.Stress.MessageLockRenewalTest.MessageLockRenewalMetrics.Sends")]
+[assembly: SuppressMessage("Design", "CA1051:Do not declare visible instance fields", Justification = "<Pending>", Scope = "member", Target = "~F:Azure.Messaging.ServiceBus.Stress.MessageLockRenewalTest.MessageLockRenewalMetrics.Receives")]
 [assembly: SuppressMessage("Globalization", "CA1305:Specify IFormatProvider", Justification = "<Pending>", Scope = "member", Target = "~M:Azure.Messaging.ServiceBus.Stress.MessageLockRenewalTest.Receiver(Azure.Messaging.ServiceBus.ServiceBusClient,System.Threading.CancellationToken)~System.Threading.Tasks.Task")]
