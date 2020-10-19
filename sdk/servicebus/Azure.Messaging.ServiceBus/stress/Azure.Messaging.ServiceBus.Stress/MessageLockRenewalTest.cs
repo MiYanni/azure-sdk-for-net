@@ -28,14 +28,7 @@ namespace Azure.Messaging.ServiceBus.Stress
             var receivers = Enumerable.Range(0, Options.Receivers)
                 .Select(_ => StartReceiver(client, receiverTokenSource.Token)).ToArray();
 
-            try
-            {
-                await sender.ConfigureAwait(false);
-            }
-            catch (Exception e) when (ContainsOperationCanceledException(e))
-            {
-            }
-
+            await sender.ConfigureAwait(false);
             await DelayUntil(() => !Metrics.HasReceivesIncremented(), TimeSpan.FromSeconds(Options.ReceivePollForCompletion)).ConfigureAwait(false);
             receiverTokenSource.Cancel();
             await Task.WhenAll(receivers).ConfigureAwait(false);
@@ -49,14 +42,14 @@ namespace Azure.Messaging.ServiceBus.Stress
                 {
                     await Task.Delay(TimeSpan.FromMilliseconds(Random.Next(0, Options.MaxSendDelayMs)), testDurationToken).ConfigureAwait(false);
                     var message = new ServiceBusMessage($"{Metrics.Sends}");
-                    await sender.SendMessageAsync(message, testDurationToken).ConfigureAwait(false);
+                    await sender.SendMessageAsync(message).ConfigureAwait(false);
                     Metrics.IncrementSends();
                 }
-                //catch (TaskCanceledException)
-                //{
-                //    // Ignore this exception as it is normal operation of the test for it to occur.
-                //}
-                catch (Exception e) when (!ContainsOperationCanceledException(e))
+                catch (Exception e) when (ContainsOperationCanceledException(e))
+                {
+                    // Ignore this exception as it is normal operation of the test for it to occur.
+                }
+                catch (Exception e)
                 {
                     Metrics.Exceptions.Enqueue(e);
                 }
@@ -71,36 +64,22 @@ namespace Azure.Messaging.ServiceBus.Stress
                 try
                 {
                     await Task.Delay(TimeSpan.FromMilliseconds(Random.Next(0, Options.MaxReceiveDelayMs)), shutdownReceiversToken).ConfigureAwait(false);
-                    var message = await receiver.ReceiveMessageAsync(TimeSpan.FromSeconds(1), shutdownReceiversToken).ConfigureAwait(false);
+                    var message = await receiver.ReceiveMessageAsync(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
                     if (message == null) continue;
 
                     _ = Convert.ToInt64(message.Body.ToString(), CultureInfo.InvariantCulture);
-                    await receiver.CompleteMessageAsync(message, shutdownReceiversToken).ConfigureAwait(false);
+                    await receiver.CompleteMessageAsync(message).ConfigureAwait(false);
                     Metrics.IncrementReceives();
                 }
-                //catch (TaskCanceledException)
-                //{
-                //    // Ignore this exception as it is normal operation of the test for it to occur.
-                //}
-                //catch (Exception e) when (ContainsTaskCanceledException(e))
-                //{
-                //    // Ignore this exception as it is normal operation of the test for it to occur.
-                //}
-                catch (Exception e) when (!ContainsOperationCanceledException(e))
+                catch (Exception e) when (ContainsOperationCanceledException(e))
+                {
+                    // Ignore this exception as it is normal operation of the test for it to occur.
+                }
+                catch (Exception e)
                 {
                     Metrics.Exceptions.Enqueue(e);
                 }
             }
-        }
-
-        private static bool ContainsTaskCanceledException(Exception e)
-        {
-            if (e is TaskCanceledException)
-            {
-                return true;
-            }
-
-            return e.InnerException != null && ContainsTaskCanceledException(e.InnerException);
         }
     }
 }
