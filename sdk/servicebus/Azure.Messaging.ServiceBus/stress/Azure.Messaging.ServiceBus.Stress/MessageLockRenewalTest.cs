@@ -2,64 +2,55 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Globalization;
+using System.Linq;
 using Azure.Test.Stress;
-using CommandLine;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure.Messaging.ServiceBus.Stress.Metrics;
+using Azure.Messaging.ServiceBus.Stress.Options;
 
 namespace Azure.Messaging.ServiceBus.Stress
 {
-    public class MessageLockRenewalTest : StressTest<MessageLockRenewalTest.MessageLockRenewalOptions, MessageLockRenewalTest.MessageLockRenewalMetrics>
+    public class MessageLockRenewalTest : StressTest<MessageLockRenewalOptions, MessageLockRenewalMetrics>
     {
         public MessageLockRenewalTest(MessageLockRenewalOptions options, MessageLockRenewalMetrics metrics)
             : base(options, metrics)
         {
         }
 
-        private const string ConnectionString = "";
-        private const string QueueName = "";
-
-        public override async Task RunAsync(CancellationToken cancellationToken)
+        public override async Task RunAsync(CancellationToken testDurationToken)
         {
-            var client = new ServiceBusClient(ConnectionString);
-            var sender = client.CreateSender(QueueName);
-            var senderTask = Sender(sender, cancellationToken);
-            var receiverCts = new CancellationTokenSource();
+            var client = new ServiceBusClient(Options.ConnectionString);
+            var sender = StartSender(client.CreateSender(Options.QueueName), testDurationToken);
 
-            var receiverTasks = new Task[Options.Receivers];
-            for (var i = 0; i < Options.Receivers; i++)
-            {
-                receiverTasks[i] = Receiver(client, receiverCts.Token);
-            }
+            var receiverTokenSource = new CancellationTokenSource();
+            var receivers = Enumerable.Range(0, Options.Receivers)
+                .Select(_ => StartReceiver(client, receiverTokenSource.Token)).ToArray();
 
             try
             {
-                await senderTask.ConfigureAwait(false);
+                await sender.ConfigureAwait(false);
             }
             catch (Exception e) when (ContainsOperationCanceledException(e))
             {
             }
 
-            // Block until all messages have been received
-            await DelayUntil(() => Metrics.Unprocessed == 0, cancellationToken).ConfigureAwait(false);
-
-            receiverCts.Cancel();
-
-            await Task.WhenAll(receiverTasks).ConfigureAwait(false);
+            await DelayUntil(() => !Metrics.HasReceivesIncremented(), TimeSpan.FromSeconds(Options.ReceivePollForCompletion)).ConfigureAwait(false);
+            receiverTokenSource.Cancel();
+            await Task.WhenAll(receivers).ConfigureAwait(false);
         }
 
-        private async Task Sender(ServiceBusSender sender, CancellationToken cancellationToken)
+        private async Task StartSender(ServiceBusSender sender, CancellationToken testDurationToken)
         {
-            var index = 0;
-            while (!cancellationToken.IsCancellationRequested)
+            while (!testDurationToken.IsCancellationRequested)
             {
                 try
                 {
-                    await Task.Delay(TimeSpan.FromMilliseconds(Random.Next(0, Options.MaxSendDelayMs)), cancellationToken).ConfigureAwait(false);
-                    var message = new ServiceBusMessage($"{index}");
+                    await Task.Delay(TimeSpan.FromMilliseconds(Random.Next(0, Options.MaxSendDelayMs)), testDurationToken).ConfigureAwait(false);
+                    var message = new ServiceBusMessage($"{Metrics.Sends}");
                     await sender.SendMessageAsync(message).ConfigureAwait(false);
-                    Interlocked.Increment(ref Metrics.Sends);
-                    index++;
+                    Metrics.IncrementSends();
                 }
                 catch (Exception e) when (!ContainsOperationCanceledException(e))
                 {
@@ -68,42 +59,23 @@ namespace Azure.Messaging.ServiceBus.Stress
             }
         }
 
-        private async Task Receiver(ServiceBusClient client, CancellationToken cancellationToken)
+        private async Task StartReceiver(ServiceBusClient client, CancellationToken shutdownReceiversToken)
         {
-            var receiver = client.CreateReceiver(QueueName);
-            while (!cancellationToken.IsCancellationRequested)
+            var receiver = client.CreateReceiver(Options.QueueName);
+            while (!shutdownReceiversToken.IsCancellationRequested)
             {
                 try
                 {
-                    await Task.Delay(TimeSpan.FromMilliseconds(Random.Next(0, Options.MaxReceiveDelayMs)), cancellationToken).ConfigureAwait(false);
+                    await Task.Delay(TimeSpan.FromMilliseconds(Random.Next(0, Options.MaxReceiveDelayMs)), shutdownReceiversToken).ConfigureAwait(false);
                     var message = await receiver.ReceiveMessageAsync().ConfigureAwait(false);
-                    _ = Convert.ToInt32(message.Body.ToString());
-                    Interlocked.Increment(ref Metrics.Receives);
+                    _ = Convert.ToInt64(message.Body.ToString(), CultureInfo.InvariantCulture);
+                    Metrics.IncrementReceives();
                 }
                 catch (Exception e) when (!ContainsOperationCanceledException(e))
                 {
                     Metrics.Exceptions.Enqueue(e);
                 }
             }
-        }
-
-        public class MessageLockRenewalOptions : ServiceBusStressOptions
-        {
-            [Option("maxSendDelayMs", Default = 50, HelpText = "Max send delay (in milliseconds)")]
-            public int MaxSendDelayMs { get; set; }
-
-            [Option("maxReceiveDelayMs", Default = 200, HelpText = "Max send delay (in milliseconds)")]
-            public int MaxReceiveDelayMs { get; set; }
-
-            [Option("receivers", Default = 3, HelpText = "Number of receivers")]
-            public int Receivers { get; set; }
-        }
-
-        public class MessageLockRenewalMetrics : StressMetrics
-        {
-            public long Sends;
-            public long Receives;
-            public long Unprocessed => (Interlocked.Read(ref Sends) - Interlocked.Read(ref Receives));
         }
     }
 }

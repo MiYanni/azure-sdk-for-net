@@ -4,14 +4,14 @@
 using Azure.Test.Stress;
 using CommandLine;
 
-namespace Azure.Messaging.ServiceBus.Stress
+namespace Azure.Messaging.ServiceBus.Stress.Options
 {
     public class ServiceBusStressOptions : StressOptions
     {
-        [Option("connectionString", HelpText = "Service Bus namespace connection string")]
+        [Option("connectionString", Required = true, HelpText = "Service Bus namespace connection string")]
         public string ConnectionString { get; set; }
 
-        [Option("queueName", HelpText = "Queue name in a Service Bus namespace")]
+        [Option("queueName", Required = true, HelpText = "Queue name in a Service Bus namespace")]
         public string QueueName { get; set; }
     }
 }
