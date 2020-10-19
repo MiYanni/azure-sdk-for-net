@@ -10,7 +10,7 @@ namespace Azure.Messaging.ServiceBus.Stress.Options
         [Option("maxSendDelayMs", Default = 50, HelpText = "Max send delay (in milliseconds)")]
         public int MaxSendDelayMs { get; set; }
 
-        [Option("maxReceiveDelayMs", Default = 200, HelpText = "Max send delay (in milliseconds)")]
+        [Option("maxReceiveDelayMs", Default = 200, HelpText = "Max receive delay (in milliseconds)")]
         public int MaxReceiveDelayMs { get; set; }
 
         [Option("receivers", Default = 3, HelpText = "Number of receivers")]
