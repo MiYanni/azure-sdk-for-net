@@ -50,7 +50,7 @@ namespace Azure.Test.Stress
             Console.WriteLine(header);
 
             using var setupStatusCts = new CancellationTokenSource();
-            var setupStatusThread = PrintStatus("=== Setup ===", () => ".", newLine: false, setupStatusCts.Token);
+            var setupStatusThread = PrintStatus("=== Setup ===", () => ".", newLine: false, options.PrintInterval, setupStatusCts.Token);
 
             using var cleanupStatusCts = new CancellationTokenSource();
             Thread cleanupStatusThread = null;
@@ -70,7 +70,7 @@ namespace Azure.Test.Stress
                     setupStatusCts.Cancel();
                     setupStatusThread.Join();
 
-                    await RunTestAsync(test, options.Duration, metrics).ConfigureAwait(false);
+                    await RunTestAsync(test, options.Duration, metrics, options.PrintInterval).ConfigureAwait(false);
                 }
                 finally
                 {
@@ -79,7 +79,7 @@ namespace Azure.Test.Stress
                         //TODO: This is always true.
                         if (cleanupStatusThread == null)
                         {
-                            cleanupStatusThread = PrintStatus("=== Cleanup ===", () => ".", newLine: false, cleanupStatusCts.Token);
+                            cleanupStatusThread = PrintStatus("=== Cleanup ===", () => ".", newLine: false, options.PrintInterval, cleanupStatusCts.Token);
                         }
 
                         await test.CleanupAsync().ConfigureAwait(false);
@@ -184,7 +184,7 @@ namespace Azure.Test.Stress
             }
         }
 
-        private static async Task RunTestAsync(IStressTest test, int durationSeconds, StressMetrics metrics)
+        private static async Task RunTestAsync(IStressTest test, int durationSeconds, StressMetrics metrics, int printInterval)
         {
             var duration = TimeSpan.FromSeconds(durationSeconds);
             using var testCts = new CancellationTokenSource(duration);
@@ -197,6 +197,7 @@ namespace Azure.Test.Stress
                 "=== Metrics ===",
                 metrics.ToString,
                 newLine: true,
+                printInterval,
                 progressStatusCts.Token);
 
             try
@@ -232,7 +233,7 @@ namespace Azure.Test.Stress
 
         // Run in dedicated thread instead of using async/await in ThreadPool, to ensure this thread has priority
         // and never fails to run to due ThreadPool starvation.
-        private static Thread PrintStatus(string header, Func<object> status, bool newLine, CancellationToken token)
+        private static Thread PrintStatus(string header, Func<object> status, bool newLine, int printInterval, CancellationToken token)
         {
             var thread = new Thread(() =>
             {
@@ -244,7 +245,7 @@ namespace Azure.Test.Stress
                 {
                     try
                     {
-                        Sleep(TimeSpan.FromSeconds(1), token);
+                        Sleep(TimeSpan.FromSeconds(printInterval), token);
                     }
                     catch (OperationCanceledException)
                     {

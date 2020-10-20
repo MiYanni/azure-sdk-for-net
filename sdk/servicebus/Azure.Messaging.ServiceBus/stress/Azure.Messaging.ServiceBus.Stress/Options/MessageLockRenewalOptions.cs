@@ -7,16 +7,13 @@ namespace Azure.Messaging.ServiceBus.Stress.Options
 {
     public class MessageLockRenewalOptions : ServiceBusStressOptions
     {
-        [Option("maxSendDelayMs", Default = 50, HelpText = "Max send delay (in milliseconds)")]
-        public int MaxSendDelayMs { get; set; }
+        [Option("receiveDuration", Default = 1, HelpText = "Receive duration in seconds")]
+        public int ReceiveDuration { get; set; }
 
-        [Option("maxReceiveDelayMs", Default = 200, HelpText = "Max receive delay (in milliseconds)")]
-        public int MaxReceiveDelayMs { get; set; }
+        [Option("renewInterval", Default = 10, HelpText = "Interval to renew lock in seconds")]
+        public int RenewInterval { get; set; }
 
-        [Option("receivers", Default = 3, HelpText = "Number of receivers")]
-        public int Receivers { get; set; }
-
-        [Option("receivePoll", Default = 3, HelpText = "Number of seconds to poll for receivers no longer gaining new messages")]
-        public int ReceivePollForCompletion { get; set; }
+        [Option("renewCount", Default = 10, HelpText = "Number of times to renew the same message")]
+        public int RenewCount { get; set; }
     }
 }

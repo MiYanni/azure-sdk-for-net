@@ -26,18 +26,22 @@ namespace Azure.Messaging.ServiceBus.Stress.Metrics
 
         public long IncrementReceives() => Interlocked.Increment(ref _receives);
 
-        private long _previousReceives = long.MinValue;
-        public bool HasReceivesIncremented()
+        private long _renews;
+        public long Renews
         {
-            if (Interlocked.Read(ref _previousReceives) == Receives)
-            {
-                return false;
-            }
-
-            Interlocked.Exchange(ref _previousReceives, Receives);
-            return true;
+            get => Interlocked.Read(ref _renews);
+            set => Interlocked.Exchange(ref _renews, value);
         }
 
-        public long Unprocessed => Sends - Receives;
+        public long IncrementRenews() => Interlocked.Increment(ref _renews);
+
+        private long _completes;
+        public long Completes
+        {
+            get => Interlocked.Read(ref _completes);
+            set => Interlocked.Exchange(ref _completes, value);
+        }
+
+        public long IncrementCompletes() => Interlocked.Increment(ref _completes);
     }
 }

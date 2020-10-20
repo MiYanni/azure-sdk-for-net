@@ -25,5 +25,8 @@ namespace Azure.Test.Stress
 
         [Option("no-cleanup", HelpText = "Disables test cleanup")]
         public bool NoCleanup { get; set; }
+
+        [Option("printInterval", Default = 1, HelpText = "Interval to print metrics information in seconds")]
+        public int PrintInterval { get; set; }
     }
 }
