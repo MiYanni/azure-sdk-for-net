@@ -180,7 +180,7 @@ namespace Azure.Test.Stress
 
             if (!string.IsNullOrEmpty(options.EventsFile))
             {
-                File.WriteAllText(options.ExceptionsFile, header + eventsString);
+                File.WriteAllText(options.EventsFile, header + eventsString);
             }
         }
 
