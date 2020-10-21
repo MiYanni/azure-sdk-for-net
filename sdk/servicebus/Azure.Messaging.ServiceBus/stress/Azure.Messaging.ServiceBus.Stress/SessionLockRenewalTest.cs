@@ -10,9 +10,9 @@ using Azure.Messaging.ServiceBus.Stress.Options;
 
 namespace Azure.Messaging.ServiceBus.Stress
 {
-    public class MessageLockRenewalTest : StressTest<MessageLockRenewalOptions, MessageLockRenewalMetrics>
+    public class SessionLockRenewalTest : StressTest<MessageLockRenewalOptions, MessageLockRenewalMetrics>
     {
-        public MessageLockRenewalTest(MessageLockRenewalOptions options, MessageLockRenewalMetrics metrics)
+        public SessionLockRenewalTest(MessageLockRenewalOptions options, MessageLockRenewalMetrics metrics)
             : base(options, metrics)
         {
         }
@@ -23,15 +23,16 @@ namespace Azure.Messaging.ServiceBus.Stress
             await using (client.ConfigureAwait(false))
             {
                 var sender = client.CreateSender(Options.QueueName);
-                var receiver = client.CreateReceiver(Options.QueueName);
+                ServiceBusSessionReceiver receiver = null;
 
                 while (!testDurationToken.IsCancellationRequested)
                 {
                     try
                     {
-                        await sender.SendMessageAsync(new ServiceBusMessage(), testDurationToken).ConfigureAwait(false);
+                        await sender.SendMessageAsync(new ServiceBusMessage { SessionId = "0" }, testDurationToken).ConfigureAwait(false);
                         Metrics.IncrementSends();
 
+                        receiver ??= await client.AcceptNextSessionAsync(Options.QueueName, null, testDurationToken).ConfigureAwait(false);
                         var receivedMessage = await receiver.ReceiveMessageAsync(TimeSpan.FromSeconds(Options.ReceiveDuration), testDurationToken).ConfigureAwait(false);
                         if (receivedMessage == null) continue;
 
@@ -39,7 +40,7 @@ namespace Azure.Messaging.ServiceBus.Stress
                         for (var i = 0; i < Options.RenewCount; ++i)
                         {
                             await Task.Delay(TimeSpan.FromSeconds(Options.RenewInterval), testDurationToken).ConfigureAwait(false);
-                            await receiver.RenewMessageLockAsync(receivedMessage, testDurationToken).ConfigureAwait(false);
+                            await receiver.RenewSessionLockAsync(testDurationToken).ConfigureAwait(false);
                             Metrics.IncrementRenews();
                         }
 

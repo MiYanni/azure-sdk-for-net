@@ -20,70 +20,74 @@ namespace Azure.Messaging.ServiceBus.Stress
         public override async Task RunAsync(CancellationToken testDurationToken)
         {
             var client = new ServiceBusClient(Options.ConnectionString);
-            var sender = client.CreateSender(Options.QueueName);
-
-            while (!testDurationToken.IsCancellationRequested)
+            await using (client.ConfigureAwait(false))
             {
-                try
+                var sender = client.CreateSender(Options.QueueName);
+
+                while (!testDurationToken.IsCancellationRequested)
                 {
-                    var processor = client.CreateProcessor(Options.QueueName, new ServiceBusProcessorOptions
+                    try
                     {
-                        MaxAutoLockRenewalDuration = TimeSpan.FromSeconds(Options.RenewDuration)
-                    });
-                    var messageCompletionSource = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-                    processor.ProcessMessageAsync += MessageHandler;
-                    processor.ProcessErrorAsync += ErrorHandler;
+                        var processor = client.CreateProcessor(Options.QueueName,
+                            new ServiceBusProcessorOptions
+                            {
+                                MaxAutoLockRenewalDuration = TimeSpan.FromSeconds(Options.RenewDuration)
+                            });
+                        var messageCompletionSource = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+                        processor.ProcessMessageAsync += MessageHandler;
+                        processor.ProcessErrorAsync += ErrorHandler;
 
-                    async Task MessageHandler(ProcessMessageEventArgs args)
-                    {
-                        try
+                        async Task MessageHandler(ProcessMessageEventArgs args)
                         {
-                            await Task.Delay(TimeSpan.FromSeconds(Options.RenewDuration - Options.PriorToExpiry), testDurationToken).ConfigureAwait(false);
-                            var receivedMessage = args.Message;
-                            if (receivedMessage == null) return;
+                            try
+                            {
+                                await Task.Delay(TimeSpan.FromSeconds(Options.RenewDuration - Options.PriorToExpiry), testDurationToken).ConfigureAwait(false);
+                                var receivedMessage = args.Message;
+                                if (receivedMessage == null) return;
 
-                            Metrics.IncrementReceives();
+                                Metrics.IncrementReceives();
+                            }
+                            catch (Exception e) when (ContainsOperationCanceledException(e) && testDurationToken.IsCancellationRequested)
+                            {
+                                // Ignore this exception as it is normal operation of the test for it to occur.
+                            }
+                            catch (Exception e)
+                            {
+                                Metrics.Exceptions.Enqueue(e);
+                            }
+                            finally
+                            {
+                                messageCompletionSource.SetResult(true);
+                            }
                         }
-                        catch (Exception e) when (ContainsOperationCanceledException(e) && testDurationToken.IsCancellationRequested)
+
+                        Task ErrorHandler(ProcessErrorEventArgs args)
                         {
-                            // Ignore this exception as it is normal operation of the test for it to occur.
+                            if (!(ContainsOperationCanceledException(args.Exception) && testDurationToken.IsCancellationRequested))
+                            {
+                                Metrics.Exceptions.Enqueue(args.Exception);
+                            }
+
+                            return Task.CompletedTask;
                         }
-                        catch (Exception e)
-                        {
-                            Metrics.Exceptions.Enqueue(e);
-                        }
-                        finally
-                        {
-                            messageCompletionSource.SetResult(true);
-                        }
+
+                        await sender.SendMessageAsync(new ServiceBusMessage(), testDurationToken).ConfigureAwait(false);
+                        Metrics.IncrementSends();
+
+                        await processor.StartProcessingAsync(testDurationToken).ConfigureAwait(false);
+
+                        await messageCompletionSource.Task.ConfigureAwait(false);
+
+                        await processor.StopProcessingAsync(testDurationToken).ConfigureAwait(false);
                     }
-
-                    Task ErrorHandler(ProcessErrorEventArgs args)
+                    catch (Exception e) when (ContainsOperationCanceledException(e) && testDurationToken.IsCancellationRequested)
                     {
-                        if (!(ContainsOperationCanceledException(args.Exception) && testDurationToken.IsCancellationRequested))
-                        {
-                            Metrics.Exceptions.Enqueue(args.Exception);
-                        }
-
-                        return Task.CompletedTask;
+                        // Ignore this exception as it is normal operation of the test for it to occur.
                     }
-
-                    await sender.SendMessageAsync(new ServiceBusMessage(), testDurationToken).ConfigureAwait(false);
-                    Metrics.IncrementSends();
-
-                    await processor.StartProcessingAsync(testDurationToken).ConfigureAwait(false);
-
-                    await messageCompletionSource.Task.ConfigureAwait(false);
-
-                    await processor.StopProcessingAsync(testDurationToken).ConfigureAwait(false);
-                }
-                catch (Exception e) when (ContainsOperationCanceledException(e) && testDurationToken.IsCancellationRequested)
-                {
-                    // Ignore this exception as it is normal operation of the test for it to occur.
-                }
-                catch (Exception e)
-                {
-                    Metrics.Exceptions.Enqueue(e);
+                    catch (Exception e)
+                    {
+                        Metrics.Exceptions.Enqueue(e);
+                    }
                 }
             }
         }
