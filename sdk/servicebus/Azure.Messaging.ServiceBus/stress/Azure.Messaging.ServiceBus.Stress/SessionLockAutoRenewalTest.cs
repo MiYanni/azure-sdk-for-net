@@ -33,7 +33,8 @@ namespace Azure.Messaging.ServiceBus.Stress
                     await using var processor = client.CreateSessionProcessor(Options.QueueName,
                         new ServiceBusSessionProcessorOptions
                         {
-                            MaxAutoLockRenewalDuration = TimeSpan.FromSeconds(Options.RenewDuration)
+                            MaxAutoLockRenewalDuration = TimeSpan.FromSeconds(Options.RenewDuration),
+                            MaxConcurrentSessions = 1
                         });
 #pragma warning restore AZC0100 // ConfigureAwait(false) must be used.
                     var messageCompletionSource = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
