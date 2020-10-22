@@ -20,7 +20,10 @@ namespace Azure.Messaging.ServiceBus.Stress
         public override async Task RunAsync(CancellationToken testDurationToken)
         {
 #pragma warning disable AZC0100 // ConfigureAwait(false) must be used.
-            await using var client = new ServiceBusClient(Options.ConnectionString);
+            await using var client = new ServiceBusClient(Options.ConnectionString, new ServiceBusClientOptions
+            {
+                RetryOptions = new ServiceBusRetryOptions { TryTimeout = TimeSpan.FromSeconds(Options.TryTimeout) }
+            });
             await using var sender = client.CreateSender(Options.QueueName);
 
             while (!testDurationToken.IsCancellationRequested)

@@ -27,10 +27,12 @@ namespace Azure.Messaging.ServiceBus.Stress.Metrics
         public long IncrementReceives() => Interlocked.Increment(ref _receives);
 
         private long _previousReceives = long.MinValue;
-        public bool HasReceivesIncremented()
+        public bool IsActivelyReceiving()
         {
             if (Interlocked.Read(ref _previousReceives) == Receives)
             {
+                // Reset receiving activity
+                Interlocked.Exchange(ref _previousReceives, long.MinValue);
                 return false;
             }
 

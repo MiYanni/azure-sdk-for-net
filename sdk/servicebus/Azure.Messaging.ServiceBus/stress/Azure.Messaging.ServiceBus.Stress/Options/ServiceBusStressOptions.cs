@@ -13,5 +13,8 @@ namespace Azure.Messaging.ServiceBus.Stress.Options
 
         [Option("queueName", Required = true, HelpText = "Queue name in a Service Bus namespace")]
         public string QueueName { get; set; }
+
+        [Option("tryTimeout", Default = 10, HelpText = "TryTimeout value for the client in seconds")]
+        public int TryTimeout { get; set; }
     }
 }

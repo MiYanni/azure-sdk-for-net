@@ -21,9 +21,11 @@ namespace Azure.Messaging.ServiceBus.Stress
         public override async Task RunAsync(CancellationToken testDurationToken)
         {
 #pragma warning disable AZC0100 // ConfigureAwait(false) must be used.
-            await using var client = new ServiceBusClient(Options.ConnectionString);
+            await using var client = new ServiceBusClient(Options.ConnectionString, new ServiceBusClientOptions
+            {
+                RetryOptions = new ServiceBusRetryOptions { TryTimeout = TimeSpan.FromSeconds(Options.TryTimeout) }
+            });
             await using var sender = client.CreateSender(Options.QueueName);
-            await using var receiver = client.CreateReceiver(Options.QueueName);
 #pragma warning restore AZC0100 // ConfigureAwait(false) must be used.
 
             var sendDuration = TimeSpan.FromSeconds(Options.SendDuration);
@@ -56,12 +58,7 @@ namespace Azure.Messaging.ServiceBus.Stress
         private async Task ReceiveAllMessagesAsync(ServiceBusClient client, CancellationToken testDurationToken)
         {
 #pragma warning disable AZC0100 // ConfigureAwait(false) must be used.
-            await using var processor = client.CreateProcessor(Options.QueueName,
-                new ServiceBusProcessorOptions
-                {
-                    MaxAutoLockRenewalDuration = TimeSpan.FromSeconds(5),
-                    MaxConcurrentCalls = 1
-                });
+            await using var processor = client.CreateProcessor(Options.QueueName);
 #pragma warning restore AZC0100 // ConfigureAwait(false) must be used.
             processor.ProcessMessageAsync += MessageHandler;
             processor.ProcessErrorAsync += ErrorHandler;
@@ -99,7 +96,7 @@ namespace Azure.Messaging.ServiceBus.Stress
 
             await processor.StartProcessingAsync(testDurationToken).ConfigureAwait(false);
 
-            await DelayUntil(() => !Metrics.HasReceivesIncremented(), TimeSpan.FromSeconds(Options.ReceiveDuration), testDurationToken).ConfigureAwait(false);
+            await DelayUntil(() => !Metrics.IsActivelyReceiving(), TimeSpan.FromSeconds(Options.ReceiveDuration), testDurationToken).ConfigureAwait(false);
 
             await processor.StopProcessingAsync(testDurationToken).ConfigureAwait(false);
         }
