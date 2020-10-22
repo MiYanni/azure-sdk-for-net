@@ -10,9 +10,9 @@ using Azure.Messaging.ServiceBus.Stress.Options;
 
 namespace Azure.Messaging.ServiceBus.Stress
 {
-    public class MessageLockAutoRenewalTest : StressTest<MessageLockAutoRenewalOptions, MessageLockAutoRenewalMetrics>
+    public class SessionLockAutoRenewalTest : StressTest<MessageLockAutoRenewalOptions, MessageLockAutoRenewalMetrics>
     {
-        public MessageLockAutoRenewalTest(MessageLockAutoRenewalOptions options, MessageLockAutoRenewalMetrics metrics)
+        public SessionLockAutoRenewalTest(MessageLockAutoRenewalOptions options, MessageLockAutoRenewalMetrics metrics)
             : base(options, metrics)
         {
         }
@@ -27,8 +27,11 @@ namespace Azure.Messaging.ServiceBus.Stress
             {
                 try
                 {
-                    await using var processor = client.CreateProcessor(Options.QueueName,
-                        new ServiceBusProcessorOptions
+                    await sender.SendMessageAsync(new ServiceBusMessage { SessionId = "0" }, testDurationToken).ConfigureAwait(false);
+                    Metrics.IncrementSends();
+
+                    await using var processor = client.CreateSessionProcessor(Options.QueueName,
+                        new ServiceBusSessionProcessorOptions
                         {
                             MaxAutoLockRenewalDuration = TimeSpan.FromSeconds(Options.RenewDuration)
                         });
@@ -37,7 +40,7 @@ namespace Azure.Messaging.ServiceBus.Stress
                     processor.ProcessMessageAsync += MessageHandler;
                     processor.ProcessErrorAsync += ErrorHandler;
 
-                    async Task MessageHandler(ProcessMessageEventArgs args)
+                    async Task MessageHandler(ProcessSessionMessageEventArgs args)
                     {
                         try
                         {
@@ -70,9 +73,6 @@ namespace Azure.Messaging.ServiceBus.Stress
 
                         return Task.CompletedTask;
                     }
-
-                    await sender.SendMessageAsync(new ServiceBusMessage(), testDurationToken).ConfigureAwait(false);
-                    Metrics.IncrementSends();
 
                     await processor.StartProcessingAsync(testDurationToken).ConfigureAwait(false);
 

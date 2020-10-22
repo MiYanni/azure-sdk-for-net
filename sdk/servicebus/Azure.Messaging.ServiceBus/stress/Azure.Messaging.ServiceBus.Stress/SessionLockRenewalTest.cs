@@ -19,44 +19,45 @@ namespace Azure.Messaging.ServiceBus.Stress
 
         public override async Task RunAsync(CancellationToken testDurationToken)
         {
-            var client = new ServiceBusClient(Options.ConnectionString);
-            await using (client.ConfigureAwait(false))
+#pragma warning disable AZC0100 // ConfigureAwait(false) must be used.
+            await using var client = new ServiceBusClient(Options.ConnectionString);
+            await using var sender = client.CreateSender(Options.QueueName);
+#pragma warning restore AZC0100 // ConfigureAwait(false) must be used.
+
+            ServiceBusSessionReceiver receiver = null;
+            while (!testDurationToken.IsCancellationRequested)
             {
-                var sender = client.CreateSender(Options.QueueName);
-                ServiceBusSessionReceiver receiver = null;
-
-                while (!testDurationToken.IsCancellationRequested)
+                try
                 {
-                    try
-                    {
-                        await sender.SendMessageAsync(new ServiceBusMessage { SessionId = "0" }, testDurationToken).ConfigureAwait(false);
-                        Metrics.IncrementSends();
+                    await sender.SendMessageAsync(new ServiceBusMessage { SessionId = "0" }, testDurationToken).ConfigureAwait(false);
+                    Metrics.IncrementSends();
 
-                        receiver ??= await client.AcceptNextSessionAsync(Options.QueueName, null, testDurationToken).ConfigureAwait(false);
-                        var receivedMessage = await receiver.ReceiveMessageAsync(TimeSpan.FromSeconds(Options.ReceiveDuration), testDurationToken).ConfigureAwait(false);
-                        if (receivedMessage == null) continue;
+                    receiver ??= await client.AcceptNextSessionAsync(Options.QueueName, null, testDurationToken).ConfigureAwait(false);
+                    var receivedMessage = await receiver.ReceiveMessageAsync(TimeSpan.FromSeconds(Options.ReceiveDuration), testDurationToken).ConfigureAwait(false);
+                    if (receivedMessage == null) continue;
 
-                        Metrics.IncrementReceives();
-                        for (var i = 0; i < Options.RenewCount; ++i)
-                        {
-                            await Task.Delay(TimeSpan.FromSeconds(Options.RenewInterval), testDurationToken).ConfigureAwait(false);
-                            await receiver.RenewSessionLockAsync(testDurationToken).ConfigureAwait(false);
-                            Metrics.IncrementRenews();
-                        }
+                    Metrics.IncrementReceives();
+                    for (var i = 0; i < Options.RenewCount; ++i)
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(Options.RenewInterval), testDurationToken).ConfigureAwait(false);
+                        await receiver.RenewSessionLockAsync(testDurationToken).ConfigureAwait(false);
+                        Metrics.IncrementRenews();
+                    }
 
-                        await receiver.CompleteMessageAsync(receivedMessage, testDurationToken).ConfigureAwait(false);
-                        Metrics.IncrementCompletes();
-                    }
-                    catch (Exception e) when (ContainsOperationCanceledException(e) && testDurationToken.IsCancellationRequested)
-                    {
-                        // Ignore this exception as it is normal operation of the test for it to occur.
-                    }
-                    catch (Exception e)
-                    {
-                        Metrics.Exceptions.Enqueue(e);
-                    }
+                    await receiver.CompleteMessageAsync(receivedMessage, testDurationToken).ConfigureAwait(false);
+                    Metrics.IncrementCompletes();
+                }
+                catch (Exception e) when (ContainsOperationCanceledException(e) && testDurationToken.IsCancellationRequested)
+                {
+                    // Ignore this exception as it is normal operation of the test for it to occur.
+                }
+                catch (Exception e)
+                {
+                    Metrics.Exceptions.Enqueue(e);
                 }
             }
+
+            receiver?.CloseAsync(cancellationToken: testDurationToken);
         }
     }
 }

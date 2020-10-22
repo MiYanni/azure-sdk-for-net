@@ -19,41 +19,40 @@ namespace Azure.Messaging.ServiceBus.Stress
 
         public override async Task RunAsync(CancellationToken testDurationToken)
         {
-            var client = new ServiceBusClient(Options.ConnectionString);
-            await using (client.ConfigureAwait(false))
+#pragma warning disable AZC0100 // ConfigureAwait(false) must be used.
+            await using var client = new ServiceBusClient(Options.ConnectionString);
+            await using var sender = client.CreateSender(Options.QueueName);
+            await using var receiver = client.CreateReceiver(Options.QueueName);
+#pragma warning restore AZC0100 // ConfigureAwait(false) must be used.
+
+            while (!testDurationToken.IsCancellationRequested)
             {
-                var sender = client.CreateSender(Options.QueueName);
-                var receiver = client.CreateReceiver(Options.QueueName);
-
-                while (!testDurationToken.IsCancellationRequested)
+                try
                 {
-                    try
-                    {
-                        await sender.SendMessageAsync(new ServiceBusMessage(), testDurationToken).ConfigureAwait(false);
-                        Metrics.IncrementSends();
+                    await sender.SendMessageAsync(new ServiceBusMessage(), testDurationToken).ConfigureAwait(false);
+                    Metrics.IncrementSends();
 
-                        var receivedMessage = await receiver.ReceiveMessageAsync(TimeSpan.FromSeconds(Options.ReceiveDuration), testDurationToken).ConfigureAwait(false);
-                        if (receivedMessage == null) continue;
+                    var receivedMessage = await receiver.ReceiveMessageAsync(TimeSpan.FromSeconds(Options.ReceiveDuration), testDurationToken).ConfigureAwait(false);
+                    if (receivedMessage == null) continue;
 
-                        Metrics.IncrementReceives();
-                        for (var i = 0; i < Options.RenewCount; ++i)
-                        {
-                            await Task.Delay(TimeSpan.FromSeconds(Options.RenewInterval), testDurationToken).ConfigureAwait(false);
-                            await receiver.RenewMessageLockAsync(receivedMessage, testDurationToken).ConfigureAwait(false);
-                            Metrics.IncrementRenews();
-                        }
+                    Metrics.IncrementReceives();
+                    for (var i = 0; i < Options.RenewCount; ++i)
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(Options.RenewInterval), testDurationToken).ConfigureAwait(false);
+                        await receiver.RenewMessageLockAsync(receivedMessage, testDurationToken).ConfigureAwait(false);
+                        Metrics.IncrementRenews();
+                    }
 
-                        await receiver.CompleteMessageAsync(receivedMessage, testDurationToken).ConfigureAwait(false);
-                        Metrics.IncrementCompletes();
-                    }
-                    catch (Exception e) when (ContainsOperationCanceledException(e) && testDurationToken.IsCancellationRequested)
-                    {
-                        // Ignore this exception as it is normal operation of the test for it to occur.
-                    }
-                    catch (Exception e)
-                    {
-                        Metrics.Exceptions.Enqueue(e);
-                    }
+                    await receiver.CompleteMessageAsync(receivedMessage, testDurationToken).ConfigureAwait(false);
+                    Metrics.IncrementCompletes();
+                }
+                catch (Exception e) when (ContainsOperationCanceledException(e) && testDurationToken.IsCancellationRequested)
+                {
+                    // Ignore this exception as it is normal operation of the test for it to occur.
+                }
+                catch (Exception e)
+                {
+                    Metrics.Exceptions.Enqueue(e);
                 }
             }
         }
