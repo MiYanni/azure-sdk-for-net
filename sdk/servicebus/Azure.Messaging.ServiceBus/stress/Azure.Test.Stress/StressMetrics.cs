@@ -56,7 +56,11 @@ namespace Azure.Test.Stress
         {
             _eventListener = new AzureEventSourceListener((eventArgs, message) =>
             {
-                Events.Enqueue((EventArgs: eventArgs, Message: message));
+                //TODO: This check for TaskCanceledException is temporary for testing ServiceBus.
+                if (!message.Contains("TaskCanceledException"))
+                {
+                    Events.Enqueue((EventArgs: eventArgs, Message: message));
+                }
             },
             level: Options.EventLevel);
 
