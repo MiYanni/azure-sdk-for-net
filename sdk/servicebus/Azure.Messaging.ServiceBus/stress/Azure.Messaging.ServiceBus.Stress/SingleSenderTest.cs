@@ -26,18 +26,18 @@ namespace Azure.Messaging.ServiceBus.Stress
             await using var receiver = client.CreateReceiver(Options.QueueName);
 #pragma warning restore AZC0100 // ConfigureAwait(false) must be used.
 
+            var sendDuration = TimeSpan.FromSeconds(Options.SendDuration);
             while (!testDurationToken.IsCancellationRequested)
             {
                 try
                 {
                     var sendStopwatch = Stopwatch.StartNew();
-                    var sendDuration = TimeSpan.FromSeconds(Options.SendDuration);
                     while (sendStopwatch.Elapsed < sendDuration)
                     {
                         await sender.SendMessageAsync(new ServiceBusMessage(), testDurationToken).ConfigureAwait(false);
                         Metrics.IncrementSends();
 
-                        await Task.Delay(TimeSpan.FromSeconds(Options.SendInterval), testDurationToken).ConfigureAwait(false);
+                        await Task.Delay(TimeSpan.FromSeconds(Options.SendDelay), testDurationToken).ConfigureAwait(false);
                     }
 
                     await ReceiveAllMessagesAsync(client, testDurationToken).ConfigureAwait(false);
@@ -53,11 +53,15 @@ namespace Azure.Messaging.ServiceBus.Stress
             }
         }
 
-
         private async Task ReceiveAllMessagesAsync(ServiceBusClient client, CancellationToken testDurationToken)
         {
 #pragma warning disable AZC0100 // ConfigureAwait(false) must be used.
-            await using var processor = client.CreateProcessor(Options.QueueName, new ServiceBusProcessorOptions { MaxConcurrentCalls = 8 });
+            await using var processor = client.CreateProcessor(Options.QueueName,
+                new ServiceBusProcessorOptions
+                {
+                    MaxAutoLockRenewalDuration = TimeSpan.FromSeconds(5),
+                    MaxConcurrentCalls = 1
+                });
 #pragma warning restore AZC0100 // ConfigureAwait(false) must be used.
             processor.ProcessMessageAsync += MessageHandler;
             processor.ProcessErrorAsync += ErrorHandler;
@@ -95,7 +99,7 @@ namespace Azure.Messaging.ServiceBus.Stress
 
             await processor.StartProcessingAsync(testDurationToken).ConfigureAwait(false);
 
-            await DelayUntil(() => !Metrics.HasReceivesIncremented(), TimeSpan.FromSeconds(Options.ReceivePollForCompletion), testDurationToken).ConfigureAwait(false);
+            await DelayUntil(() => !Metrics.HasReceivesIncremented(), TimeSpan.FromSeconds(Options.ReceiveDuration), testDurationToken).ConfigureAwait(false);
 
             await processor.StopProcessingAsync(testDurationToken).ConfigureAwait(false);
         }

@@ -7,13 +7,13 @@ namespace Azure.Messaging.ServiceBus.Stress.Options
 {
     public class LockRenewalOptions : ServiceBusStressOptions
     {
+        [Option("renewDuration", Default = 120, HelpText = "Duration to renew the same message in seconds")]
+        public int RenewDuration { get; set; }
+
+        [Option("renewDelay", Default = 10, HelpText = "Delay in renewing the lock in seconds")]
+        public int RenewDelay { get; set; }
+
         [Option("receiveDuration", Default = 1, HelpText = "Receive duration in seconds")]
         public int ReceiveDuration { get; set; }
-
-        [Option("renewInterval", Default = 10, HelpText = "Interval to renew lock in seconds")]
-        public int RenewInterval { get; set; }
-
-        [Option("renewCount", Default = 10, HelpText = "Number of times to renew the same message")]
-        public int RenewCount { get; set; }
     }
 }

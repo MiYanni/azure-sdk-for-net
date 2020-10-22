@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Diagnostics;
 using Azure.Test.Stress;
 using System.Threading;
 using System.Threading.Tasks;
@@ -25,6 +26,7 @@ namespace Azure.Messaging.ServiceBus.Stress
             await using var receiver = client.CreateReceiver(Options.QueueName);
 #pragma warning restore AZC0100 // ConfigureAwait(false) must be used.
 
+            var renewDuration = TimeSpan.FromSeconds(Options.RenewDuration);
             while (!testDurationToken.IsCancellationRequested)
             {
                 try
@@ -36,11 +38,14 @@ namespace Azure.Messaging.ServiceBus.Stress
                     if (receivedMessage == null) continue;
 
                     Metrics.IncrementReceives();
-                    for (var i = 0; i < Options.RenewCount; ++i)
+
+                    var sendStopwatch = Stopwatch.StartNew();
+                    while (sendStopwatch.Elapsed < renewDuration)
                     {
-                        await Task.Delay(TimeSpan.FromSeconds(Options.RenewInterval), testDurationToken).ConfigureAwait(false);
                         await receiver.RenewMessageLockAsync(receivedMessage, testDurationToken).ConfigureAwait(false);
                         Metrics.IncrementRenews();
+
+                        await Task.Delay(TimeSpan.FromSeconds(Options.RenewDelay), testDurationToken).ConfigureAwait(false);
                     }
 
                     await receiver.CompleteMessageAsync(receivedMessage, testDurationToken).ConfigureAwait(false);

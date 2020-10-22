@@ -7,13 +7,13 @@ namespace Azure.Messaging.ServiceBus.Stress.Options
 {
     public class SingleSenderOptions : ServiceBusStressOptions
     {
-        [Option("sendDuration", Default = 10, HelpText = "Send duration in seconds")]
+        [Option("sendDuration", Default = 10, HelpText = "Duration to continually send messages in seconds")]
         public int SendDuration { get; set; }
 
-        [Option("sendInterval", Default = 1, HelpText = "Interval to send messages in seconds")]
-        public int SendInterval { get; set; }
+        [Option("sendDelay", Default = 1, HelpText = "Delay in-between sending messages in seconds")]
+        public int SendDelay { get; set; }
 
-        [Option("receivePoll", Default = 3, HelpText = "Number of seconds to poll for receivers no longer gaining new messages")]
-        public int ReceivePollForCompletion { get; set; }
+        [Option("receiveDuration", Default = 3, HelpText = "Duration for the receiver to no longer gain new messages in seconds")]
+        public int ReceiveDuration { get; set; }
     }
 }

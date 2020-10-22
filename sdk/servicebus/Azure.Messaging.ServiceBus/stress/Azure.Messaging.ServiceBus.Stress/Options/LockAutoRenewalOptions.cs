@@ -7,10 +7,10 @@ namespace Azure.Messaging.ServiceBus.Stress.Options
 {
     public class LockAutoRenewalOptions : ServiceBusStressOptions
     {
-        [Option("renewDuration", Default = 300, HelpText = "Duration to auto-renew the message in seconds")]
+        [Option("renewDuration", Default = 120, HelpText = "Duration to auto-renew the same message in seconds")]
         public int RenewDuration { get; set; }
 
-        [Option("priorToExpiry", Default = 10, HelpText = "Duration prior to auto-renew expiry to retrieve the message in seconds")]
-        public int PriorToExpiry { get; set; }
+        [Option("receiveDuration", Default = 10, HelpText = "Duration prior to auto-renew expiry to receive the message in seconds")]
+        public int ReceiveDuration { get; set; }
     }
 }

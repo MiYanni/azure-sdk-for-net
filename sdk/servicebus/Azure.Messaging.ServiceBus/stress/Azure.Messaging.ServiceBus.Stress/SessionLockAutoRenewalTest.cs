@@ -45,7 +45,7 @@ namespace Azure.Messaging.ServiceBus.Stress
                     {
                         try
                         {
-                            await Task.Delay(TimeSpan.FromSeconds(Options.RenewDuration - Options.PriorToExpiry), testDurationToken).ConfigureAwait(false);
+                            await Task.Delay(TimeSpan.FromSeconds(Options.RenewDuration - Options.ReceiveDuration), testDurationToken).ConfigureAwait(false);
                             var receivedMessage = args.Message;
                             if (receivedMessage == null) return;
 
