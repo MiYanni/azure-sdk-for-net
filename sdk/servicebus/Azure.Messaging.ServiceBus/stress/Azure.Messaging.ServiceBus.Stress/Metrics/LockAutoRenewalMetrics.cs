@@ -6,7 +6,7 @@ using Azure.Test.Stress;
 
 namespace Azure.Messaging.ServiceBus.Stress.Metrics
 {
-    public class MessageLockAutoRenewalMetrics : StressMetrics
+    public class LockAutoRenewalMetrics : StressMetrics
     {
         private long _sends;
         public long Sends

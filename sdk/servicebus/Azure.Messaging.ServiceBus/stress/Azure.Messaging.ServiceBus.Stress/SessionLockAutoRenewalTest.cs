@@ -10,9 +10,9 @@ using Azure.Messaging.ServiceBus.Stress.Options;
 
 namespace Azure.Messaging.ServiceBus.Stress
 {
-    public class SessionLockAutoRenewalTest : StressTest<MessageLockAutoRenewalOptions, MessageLockAutoRenewalMetrics>
+    public class SessionLockAutoRenewalTest : StressTest<LockAutoRenewalOptions, LockAutoRenewalMetrics>
     {
-        public SessionLockAutoRenewalTest(MessageLockAutoRenewalOptions options, MessageLockAutoRenewalMetrics metrics)
+        public SessionLockAutoRenewalTest(LockAutoRenewalOptions options, LockAutoRenewalMetrics metrics)
             : base(options, metrics)
         {
         }

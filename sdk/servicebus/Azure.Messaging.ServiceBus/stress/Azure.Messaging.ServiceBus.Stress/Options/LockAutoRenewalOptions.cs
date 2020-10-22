@@ -5,7 +5,7 @@ using CommandLine;
 
 namespace Azure.Messaging.ServiceBus.Stress.Options
 {
-    public class MessageLockAutoRenewalOptions : ServiceBusStressOptions
+    public class LockAutoRenewalOptions : ServiceBusStressOptions
     {
         [Option("renewDuration", Default = 300, HelpText = "Duration to auto-renew the message in seconds")]
         public int RenewDuration { get; set; }

@@ -6,7 +6,7 @@ using Azure.Test.Stress;
 
 namespace Azure.Messaging.ServiceBus.Stress.Metrics
 {
-    public class MessageLockRenewalMetrics : StressMetrics
+    public class SingleSenderMetrics : StressMetrics
     {
         private long _sends;
         public long Sends
@@ -26,22 +26,16 @@ namespace Azure.Messaging.ServiceBus.Stress.Metrics
 
         public long IncrementReceives() => Interlocked.Increment(ref _receives);
 
-        private long _renews;
-        public long Renews
+        private long _previousReceives = long.MinValue;
+        public bool HasReceivesIncremented()
         {
-            get => Interlocked.Read(ref _renews);
-            set => Interlocked.Exchange(ref _renews, value);
+            if (Interlocked.Read(ref _previousReceives) == Receives)
+            {
+                return false;
+            }
+
+            Interlocked.Exchange(ref _previousReceives, Receives);
+            return true;
         }
-
-        public long IncrementRenews() => Interlocked.Increment(ref _renews);
-
-        private long _completes;
-        public long Completes
-        {
-            get => Interlocked.Read(ref _completes);
-            set => Interlocked.Exchange(ref _completes, value);
-        }
-
-        public long IncrementCompletes() => Interlocked.Increment(ref _completes);
     }
 }
