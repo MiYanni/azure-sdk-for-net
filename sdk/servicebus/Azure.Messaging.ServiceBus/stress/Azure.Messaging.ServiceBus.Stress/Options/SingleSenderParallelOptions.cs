@@ -16,7 +16,7 @@ namespace Azure.Messaging.ServiceBus.Stress.Options
         [Option("receiveDuration", Default = 3, HelpText = "Duration for the receiver to no longer gain new messages in seconds")]
         public int ReceiveDuration { get; set; }
 
-        [Option("parallelSenders", Default = 3, HelpText = "Number of parallel senders to create")]
-        public int ParallelSenders { get; set; }
+        [Option("parallelOperations", Default = 6, HelpText = "Number of parallel send operations")]
+        public int ParallelOperations { get; set; }
     }
 }

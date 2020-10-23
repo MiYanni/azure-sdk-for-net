@@ -26,6 +26,7 @@ namespace Azure.Messaging.ServiceBus.Stress
             {
                 RetryOptions = new ServiceBusRetryOptions { TryTimeout = TimeSpan.FromSeconds(Options.TryTimeout) }
             });
+            await using var sender = client.CreateSender(Options.QueueName);
 #pragma warning restore AZC0100 // ConfigureAwait(false) must be used.
 
             var sendDuration = TimeSpan.FromSeconds(Options.SendDuration);
@@ -33,8 +34,8 @@ namespace Azure.Messaging.ServiceBus.Stress
             {
                 try
                 {
-                    var senders = Enumerable.Range(0, Options.ParallelSenders)
-                        .Select(_ => SendMessagesAsync(client, sendDuration, testDurationToken)).ToArray();
+                    var senders = Enumerable.Range(0, Options.ParallelOperations)
+                        .Select(_ => SendMessagesAsync(sender, sendDuration, testDurationToken)).ToArray();
 
                     await Task.WhenAll(senders).ConfigureAwait(false);
 
@@ -51,11 +52,8 @@ namespace Azure.Messaging.ServiceBus.Stress
             }
         }
 
-        private async Task SendMessagesAsync(ServiceBusClient client, TimeSpan sendDuration, CancellationToken testDurationToken)
+        private async Task SendMessagesAsync(ServiceBusSender sender, TimeSpan sendDuration, CancellationToken testDurationToken)
         {
-#pragma warning disable AZC0100 // ConfigureAwait(false) must be used.
-            await using var sender = client.CreateSender(Options.QueueName);
-#pragma warning restore AZC0100 // ConfigureAwait(false) must be used.
             var sendStopwatch = Stopwatch.StartNew();
             while (sendStopwatch.Elapsed < sendDuration)
             {
