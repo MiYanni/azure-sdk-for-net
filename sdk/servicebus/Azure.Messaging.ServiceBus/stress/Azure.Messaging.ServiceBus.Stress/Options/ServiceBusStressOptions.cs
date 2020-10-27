@@ -16,5 +16,8 @@ namespace Azure.Messaging.ServiceBus.Stress.Options
 
         [Option("tryTimeout", Default = 10, HelpText = "TryTimeout value for the client in seconds")]
         public int TryTimeout { get; set; }
+
+        [Option("maxRetries", Default = 10, HelpText = "MaxRetries value for the client")]
+        public int MaxRetries { get; set; }
     }
 }

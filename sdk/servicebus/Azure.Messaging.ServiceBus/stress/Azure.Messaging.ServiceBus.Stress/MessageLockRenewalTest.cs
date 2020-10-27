@@ -23,7 +23,7 @@ namespace Azure.Messaging.ServiceBus.Stress
 #pragma warning disable AZC0100 // ConfigureAwait(false) must be used.
             await using var client = new ServiceBusClient(Options.ConnectionString, new ServiceBusClientOptions
             {
-                RetryOptions = new ServiceBusRetryOptions { TryTimeout = TimeSpan.FromSeconds(Options.TryTimeout) }
+                RetryOptions = new ServiceBusRetryOptions { TryTimeout = TimeSpan.FromSeconds(Options.TryTimeout), MaxRetries = Options.MaxRetries }
             });
             await using var sender = client.CreateSender(Options.QueueName);
             await using var receiver = client.CreateReceiver(Options.QueueName);

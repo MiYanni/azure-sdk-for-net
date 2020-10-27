@@ -23,7 +23,7 @@ namespace Azure.Messaging.ServiceBus.Stress
 #pragma warning disable AZC0100 // ConfigureAwait(false) must be used.
             await using var client = new ServiceBusClient(Options.ConnectionString, new ServiceBusClientOptions
             {
-                RetryOptions = new ServiceBusRetryOptions { TryTimeout = TimeSpan.FromSeconds(Options.TryTimeout) }
+                RetryOptions = new ServiceBusRetryOptions { TryTimeout = TimeSpan.FromSeconds(Options.TryTimeout), MaxRetries = Options.MaxRetries }
             });
             await using var sender = client.CreateSender(Options.QueueName);
 #pragma warning restore AZC0100 // ConfigureAwait(false) must be used.
@@ -42,7 +42,7 @@ namespace Azure.Messaging.ServiceBus.Stress
                         await Task.Delay(TimeSpan.FromSeconds(Options.SendDelay), testDurationToken).ConfigureAwait(false);
                     }
 
-                    await ReceiveAllMessagesAsync(client, testDurationToken).ConfigureAwait(false);
+                    await ReceiveAndDeleteAllMessagesAsync(client, testDurationToken).ConfigureAwait(false);
                 }
                 catch (Exception e) when (ContainsOperationCanceledException(e) && testDurationToken.IsCancellationRequested)
                 {
@@ -55,10 +55,14 @@ namespace Azure.Messaging.ServiceBus.Stress
             }
         }
 
-        private async Task ReceiveAllMessagesAsync(ServiceBusClient client, CancellationToken testDurationToken)
+        private async Task ReceiveAndDeleteAllMessagesAsync(ServiceBusClient client, CancellationToken testDurationToken)
         {
 #pragma warning disable AZC0100 // ConfigureAwait(false) must be used.
-            await using var processor = client.CreateProcessor(Options.QueueName);
+            await using var processor = client.CreateProcessor(Options.QueueName, new ServiceBusProcessorOptions
+            {
+                MaxConcurrentCalls = 10,
+                ReceiveMode = ReceiveMode.ReceiveAndDelete
+            });
 #pragma warning restore AZC0100 // ConfigureAwait(false) must be used.
             processor.ProcessMessageAsync += MessageHandler;
             processor.ProcessErrorAsync += ErrorHandler;
