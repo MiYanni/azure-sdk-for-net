@@ -47,7 +47,7 @@ namespace Azure.AI.MetricsAdvisor.Tests
                 Assert.That(feedResult.IsAdministrator, Is.EqualTo(feed.IsAdministrator));
                 Assert.That(feedResult.MetricIds, Is.EqualTo(feed.MetricIds));
                 Assert.That(feedResult.Name, Is.EqualTo(feed.Name));
-                Assert.That(feedResult.Options.Administrators, Is.EquivalentTo(feed.Options.Administrators));
+                Assert.That(feedResult.Administrators, Is.EquivalentTo(feed.Administrators));
                 Assert.That(feedResult.Schema.DimensionColumns.Count, Is.EqualTo(feed.Schema.DimensionColumns.Count));
                 Assert.That(feedResult.SourceType, Is.EqualTo(feed.SourceType));
                 Assert.That(feedResult.Status, Is.EqualTo(feed.Status));
@@ -60,14 +60,19 @@ namespace Azure.AI.MetricsAdvisor.Tests
             var adminClient = GetMetricsAdvisorAdministrationClient();
             InitDataFeedSources();
 
-            DataFeed createdDataFeed = await adminClient.CreateDataFeedAsync(_blobFeedName, _blobSource, _dailyGranularity, _dataFeedSchema, _dataFeedIngestionSettings, _dataFeedOptions).ConfigureAwait(false);
+            DataFeed dataFeed = new DataFeed(_blobFeedName, _blobSource, _dailyGranularity, _dataFeedSchema, _dataFeedIngestionSettings)
+            {
+                Description = _dataFeedDescription
+            };
 
-            Assert.That(createdDataFeed.Id, Is.Not.Null);
+            dataFeed = await adminClient.CreateDataFeedAsync(dataFeed).ConfigureAwait(false);
 
-            createdDataFeed.Options.Description = Recording.GenerateAlphaNumericId("desc");
-            await adminClient.UpdateDataFeedAsync(createdDataFeed.Id, createdDataFeed).ConfigureAwait(false);
+            Assert.That(dataFeed.Id, Is.Not.Null);
 
-            await adminClient.DeleteDataFeedAsync(createdDataFeed.Id);
+            dataFeed.Description = Recording.GenerateAlphaNumericId("desc");
+            await adminClient.UpdateDataFeedAsync(dataFeed.Id, dataFeed).ConfigureAwait(false);
+
+            await adminClient.DeleteDataFeedAsync(dataFeed.Id);
         }
 
         [RecordedTest]
@@ -76,19 +81,24 @@ namespace Azure.AI.MetricsAdvisor.Tests
             var adminClient = GetMetricsAdvisorAdministrationClient();
             InitDataFeedSources();
 
-            DataFeed createdDataFeed = await adminClient.CreateDataFeedAsync(_blobFeedName, _blobSource, _dailyGranularity, _dataFeedSchema, _dataFeedIngestionSettings, _dataFeedOptions).ConfigureAwait(false);
+            DataFeed dataFeed = new DataFeed(_blobFeedName, _blobSource, _dailyGranularity, _dataFeedSchema, _dataFeedIngestionSettings)
+            {
+                Description = _dataFeedDescription
+            };
 
-            Assert.That(createdDataFeed.Id, Is.Not.Null);
+            dataFeed = await adminClient.CreateDataFeedAsync(dataFeed).ConfigureAwait(false);
 
-            DataFeed getDataFeed = await adminClient.GetDataFeedAsync(createdDataFeed.Id);
+            Assert.That(dataFeed.Id, Is.Not.Null);
 
-            getDataFeed.Options.Description = Recording.GenerateAlphaNumericId("desc");
-            getDataFeed.Options.MissingDataPointFillSettings.CustomFillValue = 42;
-            getDataFeed.Options.MissingDataPointFillSettings.FillType = DataFeedMissingDataPointFillType.CustomValue;
+            DataFeed getDataFeed = await adminClient.GetDataFeedAsync(dataFeed.Id);
+
+            getDataFeed.Description = Recording.GenerateAlphaNumericId("desc");
+            getDataFeed.MissingDataPointFillSettings.CustomFillValue = 42;
+            getDataFeed.MissingDataPointFillSettings.FillType = DataFeedMissingDataPointFillType.CustomValue;
 
             await adminClient.UpdateDataFeedAsync(getDataFeed.Id, getDataFeed).ConfigureAwait(false);
 
-            await adminClient.DeleteDataFeedAsync(createdDataFeed.Id);
+            await adminClient.DeleteDataFeedAsync(dataFeed.Id);
         }
 
         [RecordedTest]
@@ -97,15 +107,17 @@ namespace Azure.AI.MetricsAdvisor.Tests
             var adminClient = GetMetricsAdvisorAdministrationClient();
             InitDataFeedSources();
 
-            DataFeed createdDataFeed = await adminClient.CreateDataFeedAsync(_blobFeedName, _blobSource, _dailyGranularity, _dataFeedSchema, _dataFeedIngestionSettings, dataFeedOptions: null).ConfigureAwait(false);
+            DataFeed dataFeed = new DataFeed(_blobFeedName, _blobSource, _dailyGranularity, _dataFeedSchema, _dataFeedIngestionSettings);
 
-            Assert.That(createdDataFeed.Id, Is.Not.Null);
+            dataFeed = await adminClient.CreateDataFeedAsync(dataFeed).ConfigureAwait(false);
 
-            createdDataFeed.Options.Description = Recording.GenerateAlphaNumericId("desc");
-            await adminClient.UpdateDataFeedAsync(createdDataFeed.Id, createdDataFeed).ConfigureAwait(false);
+            Assert.That(dataFeed.Id, Is.Not.Null);
 
-            await adminClient.DeleteDataFeedAsync(createdDataFeed.Id).ConfigureAwait(false);
-            ;
+            dataFeed.Description = Recording.GenerateAlphaNumericId("desc");
+
+            await adminClient.UpdateDataFeedAsync(dataFeed.Id, dataFeed).ConfigureAwait(false);
+
+            await adminClient.DeleteDataFeedAsync(dataFeed.Id).ConfigureAwait(false);
         }
 
         [RecordedTest]
@@ -207,10 +219,16 @@ namespace Azure.AI.MetricsAdvisor.Tests
 
             // Validate that we can Get the newly created config
             AnomalyAlertConfiguration getAlertConfig = await adminClient.GetAnomalyAlertConfigurationAsync(createdAlertConfig.Id).ConfigureAwait(false);
-            Response<IReadOnlyList<AnomalyAlertConfiguration>> getAlertConfigs = await adminClient.GetAnomalyAlertConfigurationsAsync(createdAnomalyDetectionConfiguration.Id).ConfigureAwait(false);
+
+            List<AnomalyAlertConfiguration> getAlertConfigs = new List<AnomalyAlertConfiguration>();
+
+            await foreach (var config in adminClient.GetAnomalyAlertConfigurationsAsync(createdAnomalyDetectionConfiguration.Id))
+            {
+                getAlertConfigs.Add(config);
+            }
 
             Assert.That(getAlertConfig.Id, Is.EqualTo(createdAlertConfig.Id));
-            Assert.That(getAlertConfigs.Value.Any(c => c.Id == createdAlertConfig.Id));
+            Assert.That(getAlertConfigs.Any(c => c.Id == createdAlertConfig.Id));
 
             getAlertConfig.Description = "Updated";
             getAlertConfig.CrossMetricsOperator = MetricAnomalyAlertConfigurationsOperator.And;
@@ -241,27 +259,27 @@ namespace Azure.AI.MetricsAdvisor.Tests
         {
             var adminClient = GetMetricsAdvisorAdministrationClient();
 
-            AlertingHook createdEmailHook = await adminClient.CreateHookAsync(new EmailHook(Recording.GenerateAlphaNumericId("test"), new List<string> { "foo@contoso.com" }) { Description = $"{nameof(EmailHook)} description" }).ConfigureAwait(false);
+            NotificationHook createdEmailHook = await adminClient.CreateHookAsync(new EmailNotificationHook(Recording.GenerateAlphaNumericId("test"), new List<string> { "foo@contoso.com" }) { Description = $"{nameof(EmailNotificationHook)} description" }).ConfigureAwait(false);
 
-            EmailHook getEmailHook = (await adminClient.GetHookAsync(createdEmailHook.Id).ConfigureAwait(false)).Value as EmailHook;
+            EmailNotificationHook getEmailHook = (await adminClient.GetHookAsync(createdEmailHook.Id).ConfigureAwait(false)).Value as EmailNotificationHook;
 
             getEmailHook.Description = "updated description";
             getEmailHook.EmailsToAlert.Add($"{Recording.GenerateAlphaNumericId("user")}@contoso.com");
 
             await adminClient.UpdateHookAsync(getEmailHook.Id, getEmailHook).ConfigureAwait(false);
 
-            AlertingHook createdWebHook = await adminClient.CreateHookAsync(new WebHook(Recording.GenerateAlphaNumericId("test"), "http://contoso.com") { Description = $"{nameof(WebHook)} description" }).ConfigureAwait(false);
+            NotificationHook createdWebHook = await adminClient.CreateHookAsync(new WebNotificationHook(Recording.GenerateAlphaNumericId("test"), "http://contoso.com") { Description = $"{nameof(WebNotificationHook)} description" }).ConfigureAwait(false);
 
             createdWebHook.Description = "updated description";
 
             await adminClient.UpdateHookAsync(createdEmailHook.Id, createdEmailHook).ConfigureAwait(false);
 
-            WebHook getWebHook = (await adminClient.GetHookAsync(createdWebHook.Id).ConfigureAwait(false)).Value as WebHook;
+            WebNotificationHook getWebHook = (await adminClient.GetHookAsync(createdWebHook.Id).ConfigureAwait(false)).Value as WebNotificationHook;
 
             getWebHook.Description = "updated description";
             getWebHook.CertificateKey = Recording.GenerateAlphaNumericId("key");
 
-            List<AlertingHook> hooks = await adminClient.GetHooksAsync(new GetHooksOptions { HookNameFilter = getWebHook.Name }).ToEnumerableAsync().ConfigureAwait(false);
+            List<NotificationHook> hooks = await adminClient.GetHooksAsync(new GetHooksOptions { HookNameFilter = getWebHook.Name }).ToEnumerableAsync().ConfigureAwait(false);
 
             Assert.That(getEmailHook.Id, Is.EqualTo(createdEmailHook.Id));
             Assert.That(getEmailHook.Name, Is.EqualTo(createdEmailHook.Name));
@@ -284,9 +302,15 @@ namespace Azure.AI.MetricsAdvisor.Tests
         {
             var adminClient = GetMetricsAdvisorAdministrationClient();
 
-            Response<IReadOnlyList<AnomalyDetectionConfiguration>> configs = await adminClient.GetMetricAnomalyDetectionConfigurationsAsync(MetricId).ConfigureAwait(false);
+            bool isResponseEmpty = true;
 
-            Assert.That(configs.Value, Is.Not.Empty);
+            await foreach (AnomalyDetectionConfiguration config in adminClient.GetMetricAnomalyDetectionConfigurationsAsync(MetricId))
+            {
+                isResponseEmpty = false;
+                break;
+            }
+
+            Assert.That(isResponseEmpty, Is.False);
         }
     }
 }

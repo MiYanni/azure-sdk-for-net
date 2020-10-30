@@ -64,6 +64,29 @@ namespace Azure.Messaging.EventHubs
         public System.DateTimeOffset CreatedOn { get { throw null; } }
         public string Name { get { throw null; } }
         public string[] PartitionIds { get { throw null; } }
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Never)]
+        public override bool Equals(object obj) { throw null; }
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Never)]
+        public override int GetHashCode() { throw null; }
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Never)]
+        public override string ToString() { throw null; }
+    }
+    public partial class EventHubsConnectionStringProperties
+    {
+        public EventHubsConnectionStringProperties() { }
+        public System.Uri Endpoint { get { throw null; } }
+        public string EventHubName { get { throw null; } }
+        public string FullyQualifiedNamespace { get { throw null; } }
+        public string SharedAccessKey { get { throw null; } }
+        public string SharedAccessKeyName { get { throw null; } }
+        public string SharedAccessSignature { get { throw null; } }
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Never)]
+        public override bool Equals(object obj) { throw null; }
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Never)]
+        public override int GetHashCode() { throw null; }
+        public static Azure.Messaging.EventHubs.EventHubsConnectionStringProperties Parse(string connectionString) { throw null; }
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Never)]
+        public override string ToString() { throw null; }
     }
     public partial class EventHubsException : System.Exception
     {
@@ -136,6 +159,12 @@ namespace Azure.Messaging.EventHubs
         public long LastEnqueuedOffset { get { throw null; } }
         public long LastEnqueuedSequenceNumber { get { throw null; } }
         public System.DateTimeOffset LastEnqueuedTime { get { throw null; } }
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Never)]
+        public override bool Equals(object obj) { throw null; }
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Never)]
+        public override int GetHashCode() { throw null; }
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Never)]
+        public override string ToString() { throw null; }
     }
 }
 namespace Azure.Messaging.EventHubs.Consumer

@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <!-- Assembly props -->
   <PropertyGroup>
     <AssemblyTitle>Digital Twins SDK</AssemblyTitle>
@@ -52,4 +52,5 @@
   </ItemGroup>
 
   <Import Project="$(RepoRoot)\sdk\core\Azure.Core\src\Azure.Core.props" />
+
 </Project>

@@ -104,6 +104,23 @@ namespace Azure.Messaging.ServiceBus
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Never)]
         public override string ToString() { throw null; }
     }
+    public partial class ServiceBusConnectionStringProperties
+    {
+        public ServiceBusConnectionStringProperties() { }
+        public System.Uri Endpoint { get { throw null; } }
+        public string EntityPath { get { throw null; } }
+        public string FullyQualifiedNamespace { get { throw null; } }
+        public string SharedAccessKey { get { throw null; } }
+        public string SharedAccessKeyName { get { throw null; } }
+        public string SharedAccessSignature { get { throw null; } }
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Never)]
+        public override bool Equals(object obj) { throw null; }
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Never)]
+        public override int GetHashCode() { throw null; }
+        public static Azure.Messaging.ServiceBus.ServiceBusConnectionStringProperties Parse(string connectionString) { throw null; }
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Never)]
+        public override string ToString() { throw null; }
+    }
     public enum ServiceBusErrorSource
     {
         Complete = 0,
@@ -148,7 +165,6 @@ namespace Azure.Messaging.ServiceBus
         public ServiceBusMessage(Azure.Messaging.ServiceBus.ServiceBusReceivedMessage receivedMessage) { }
         public ServiceBusMessage(System.ReadOnlyMemory<byte> body) { }
         public ServiceBusMessage(string body) { }
-        public Azure.Core.Amqp.AmqpAnnotatedMessage AmqpMessage { get { throw null; } set { } }
         public System.Collections.Generic.IDictionary<string, object> ApplicationProperties { get { throw null; } }
         public Azure.BinaryData Body { get { throw null; } set { } }
         public string ContentType { get { throw null; } set { } }
@@ -163,6 +179,7 @@ namespace Azure.Messaging.ServiceBus
         public System.TimeSpan TimeToLive { get { throw null; } set { } }
         public string To { get { throw null; } set { } }
         public string TransactionPartitionKey { get { throw null; } set { } }
+        public Azure.Core.Amqp.AmqpAnnotatedMessage GetRawMessage() { throw null; }
         public override string ToString() { throw null; }
     }
     public sealed partial class ServiceBusMessageBatch : System.IDisposable
@@ -198,7 +215,6 @@ namespace Azure.Messaging.ServiceBus
         public bool IsProcessing { get { throw null; } }
         public System.TimeSpan MaxAutoLockRenewalDuration { get { throw null; } }
         public int MaxConcurrentCalls { get { throw null; } }
-        public System.TimeSpan? MaxReceiveWaitTime { get { throw null; } }
         public int PrefetchCount { get { throw null; } }
         public Azure.Messaging.ServiceBus.ReceiveMode ReceiveMode { get { throw null; } }
         public event System.Func<Azure.Messaging.ServiceBus.ProcessErrorEventArgs, System.Threading.Tasks.Task> ProcessErrorAsync { add { } remove { } }
@@ -232,7 +248,6 @@ namespace Azure.Messaging.ServiceBus
     public partial class ServiceBusReceivedMessage
     {
         internal ServiceBusReceivedMessage() { }
-        public Azure.Core.Amqp.AmqpAnnotatedMessage AmqpMessage { get { throw null; } }
         public System.Collections.Generic.IReadOnlyDictionary<string, object> ApplicationProperties { get { throw null; } }
         public Azure.BinaryData Body { get { throw null; } }
         public string ContentType { get { throw null; } }
@@ -257,6 +272,7 @@ namespace Azure.Messaging.ServiceBus
         public System.TimeSpan TimeToLive { get { throw null; } }
         public string To { get { throw null; } }
         public string ViaPartitionKey { get { throw null; } }
+        public Azure.Core.Amqp.AmqpAnnotatedMessage GetRawMessage() { throw null; }
         public override string ToString() { throw null; }
     }
     public partial class ServiceBusReceiver : System.IAsyncDisposable
@@ -376,7 +392,6 @@ namespace Azure.Messaging.ServiceBus
         public System.TimeSpan MaxAutoLockRenewalDuration { get { throw null; } }
         public int MaxConcurrentCallsPerSession { get { throw null; } }
         public int MaxConcurrentSessions { get { throw null; } }
-        public System.TimeSpan? MaxReceiveWaitTime { get { throw null; } }
         public int PrefetchCount { get { throw null; } }
         public Azure.Messaging.ServiceBus.ReceiveMode ReceiveMode { get { throw null; } }
         public event System.Func<Azure.Messaging.ServiceBus.ProcessErrorEventArgs, System.Threading.Tasks.Task> ProcessErrorAsync { add { } remove { } }
