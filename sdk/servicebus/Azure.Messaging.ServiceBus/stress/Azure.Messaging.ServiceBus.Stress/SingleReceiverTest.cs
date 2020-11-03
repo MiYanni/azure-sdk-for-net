@@ -24,10 +24,13 @@ namespace Azure.Messaging.ServiceBus.Stress
 #pragma warning disable AZC0100 // ConfigureAwait(false) must be used.
             await using var client = new ServiceBusClient(Options.ConnectionString, new ServiceBusClientOptions
             {
-                RetryOptions = new ServiceBusRetryOptions { TryTimeout = TimeSpan.FromSeconds(Options.TryTimeout), MaxRetries = 20 }
+                RetryOptions = new ServiceBusRetryOptions { TryTimeout = TimeSpan.FromSeconds(Options.TryTimeout), MaxRetries = Options.MaxRetries }
             });
             await using var sender = client.CreateSender(Options.QueueName);
-            await using var receiver = client.CreateReceiver(Options.QueueName);
+            await using var receiver = client.CreateReceiver(Options.QueueName, new ServiceBusReceiverOptions
+            {
+                ReceiveMode = ReceiveMode.ReceiveAndDelete
+            });
 #pragma warning restore AZC0100 // ConfigureAwait(false) must be used.
 
             const int messageCount = 50000;
@@ -38,13 +41,12 @@ namespace Azure.Messaging.ServiceBus.Stress
                 {
                     if (firstRun)
                     {
-                        await SendMessages(sender, messageCount, testDurationToken).ConfigureAwait(false);
+                        await SendMessagesAsync(sender, messageCount, testDurationToken).ConfigureAwait(false);
                         firstRun = false;
                     }
-                    await SendMessages(sender, messageCount, testDurationToken).ConfigureAwait(false);
+                    await SendMessagesAsync(sender, messageCount, testDurationToken).ConfigureAwait(false);
 
-                    await receiver.ReceiveMessagesAsync(messageCount, cancellationToken: testDurationToken).ConfigureAwait(false);
-                    Metrics.IncrementReceives(messageCount);
+                    await ReceiveMessagesAsync(receiver, messageCount, testDurationToken).ConfigureAwait(false);
                 }
                 catch (Exception e) when (ContainsOperationCanceledException(e) && testDurationToken.IsCancellationRequested)
                 {
@@ -57,7 +59,18 @@ namespace Azure.Messaging.ServiceBus.Stress
             }
         }
 
-        private async Task SendMessages(ServiceBusSender sender, int messageCount, CancellationToken testDurationToken)
+        private async Task ReceiveMessagesAsync(ServiceBusReceiver receiver, int messageCount, CancellationToken testDurationToken)
+        {
+            var currentMaxCount = messageCount;
+            while (currentMaxCount != 0)
+            {
+                var messages = await receiver.ReceiveMessagesAsync(currentMaxCount, cancellationToken: testDurationToken).ConfigureAwait(false);
+                currentMaxCount -= messages.Count;
+                Metrics.IncrementReceives(messages.Count);
+            }
+        }
+
+        private async Task SendMessagesAsync(ServiceBusSender sender, int messageCount, CancellationToken testDurationToken)
         {
             // This is the max batch size defined by the service itself.
             const int batchChunkSize = 4500;
@@ -66,19 +79,21 @@ namespace Azure.Messaging.ServiceBus.Stress
 
             while (chunkCount > 0)
             {
-                var batch = await sender.CreateMessageBatchAsync(testDurationToken).ConfigureAwait(false);
-                Enumerable.Range(0, batchChunkSize).ToList().ForEach(_ => batch.TryAddMessage(new ServiceBusMessage()));
-                await sender.SendMessagesAsync(batch, testDurationToken).ConfigureAwait(false);
+                await SendBatchAsync(batchChunkSize).ConfigureAwait(false);
                 chunkCount--;
-                Metrics.IncrementSends(batchChunkSize);
             }
 
             if (remainingCount > 0)
             {
+                await SendBatchAsync(remainingCount).ConfigureAwait(false);
+            }
+
+            async Task SendBatchAsync(int batchCount)
+            {
                 var batch = await sender.CreateMessageBatchAsync(testDurationToken).ConfigureAwait(false);
-                Enumerable.Range(0, remainingCount).ToList().ForEach(_ => batch.TryAddMessage(new ServiceBusMessage()));
+                Enumerable.Range(0, batchCount).ToList().ForEach(_ => batch.TryAddMessage(new ServiceBusMessage()));
                 await sender.SendMessagesAsync(batch, testDurationToken).ConfigureAwait(false);
-                Metrics.IncrementSends(remainingCount);
+                Metrics.IncrementSends(batchCount);
             }
         }
     }
