@@ -18,6 +18,7 @@ namespace Azure.Messaging.ServiceBus.Stress
         {
             var connectionString = Environment.GetEnvironmentVariable("SERVICEBUS_CONNECTION_STRING");
             var queueName = Environment.GetEnvironmentVariable("SERVICEBUS_QUEUE_NAME");
+            //var topicName = Environment.GetEnvironmentVariable("SERVICEBUS_TOPIC_NAME");
 
             //var track2Client =  new ServiceBusClient(connectionString);
             //await Track2Send1MMessages(track2Client, queueName).ConfigureAwait(false);
