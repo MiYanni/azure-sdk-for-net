@@ -23,12 +23,16 @@ namespace Azure.Messaging.ServiceBus.Stress
             //await Track2Send1MMessages(track2Client, queueName).ConfigureAwait(false);
             //await Track2Scenario1Processor(track2Client, queueName, ReceiveMode.ReceiveAndDelete).ConfigureAwait(false);
             //await Track2Scenario1Receiver(track2Client, queueName, ReceiveMode.ReceiveAndDelete).ConfigureAwait(false);
-            //await Track2Scenario2Sender(track2Client, queueName).ConfigureAwait(false);
 
-            await Track1Send1MMessages(connectionString, queueName).ConfigureAwait(false);
-            await Track1Scenario1Processor(connectionString, queueName, T1ReceiveMode.ReceiveAndDelete).ConfigureAwait(false);
+            //await Track2Scenario2Sender(track2Client, queueName).ConfigureAwait(false);
+            //await Track2Scenario2SenderPayload(track2Client, queueName).ConfigureAwait(false);
+
+            //await Track1Send1MMessages(connectionString, queueName).ConfigureAwait(false);
+            //await Track1Scenario1Processor(connectionString, queueName, T1ReceiveMode.ReceiveAndDelete).ConfigureAwait(false);
             //await Track1Scenario1Receiver(connectionString, queueName, T1ReceiveMode.ReceiveAndDelete).ConfigureAwait(false);
+
             //await Track1Scenario2Sender(connectionString, queueName).ConfigureAwait(false);
+            await Track1Scenario2SenderPayload(connectionString, queueName).ConfigureAwait(false);
         }
 
         private static async Task Track2Send1MMessages(ServiceBusClient track2Client, string queueName)
@@ -42,7 +46,7 @@ namespace Azure.Messaging.ServiceBus.Stress
 
         private static async Task Track2Scenario1Processor(ServiceBusClient track2Client, string queueName, ReceiveMode mode)
         {
-            var processor = track2Client.CreateProcessor(queueName, new ServiceBusProcessorOptions { ReceiveMode = mode, MaxConcurrentCalls = 32 });
+            var processor = track2Client.CreateProcessor(queueName, new ServiceBusProcessorOptions { ReceiveMode = mode, MaxConcurrentCalls = 40 });
             long receives = 0;
             processor.ProcessMessageAsync += MessageHandler;
             processor.ProcessErrorAsync += ErrorHandler;
@@ -132,6 +136,72 @@ namespace Azure.Messaging.ServiceBus.Stress
             }
         }
 
+        private static async Task Track2Scenario2SenderPayload(ServiceBusClient track2Client, string queueName)
+        {
+            var sender = track2Client.CreateSender(queueName);
+            var stopwatch = new Stopwatch();
+            var messageTotal = 0;
+            var loopCount = 0;
+            var drainCount = 0;
+
+            stopwatch.Start();
+            while (stopwatch.Elapsed < TimeSpan.FromHours(3))
+            {
+                if ((drainCount + 1) > 1023)
+                {
+                    stopwatch.Stop();
+                    await Track2Drain(track2Client, queueName, drainCount).ConfigureAwait(false);
+                    drainCount = 0;
+                    stopwatch.Start();
+                }
+
+                await sender.SendMessageAsync(new ServiceBusMessage(Enumerable.Repeat((byte)1, 1048549).ToArray())).ConfigureAwait(false);
+                loopCount++;
+                messageTotal++;
+                drainCount++;
+
+                if (loopCount >= 50)
+                {
+                    var sendsPerSecond = messageTotal / stopwatch.Elapsed.TotalSeconds;
+                    Console.WriteLine($"Sends per second: {sendsPerSecond}");
+                    loopCount = 0;
+                }
+            }
+        }
+
+        private static async Task Track2Drain(ServiceBusClient track2Client, string queueName, int messageCount)
+        {
+            var processor = track2Client.CreateProcessor(queueName, new ServiceBusProcessorOptions { ReceiveMode = ReceiveMode.ReceiveAndDelete, MaxConcurrentCalls = 40 });
+            long receives = 0;
+            processor.ProcessMessageAsync += MessageHandler;
+            processor.ProcessErrorAsync += ErrorHandler;
+
+            Task MessageHandler(ProcessMessageEventArgs args)
+            {
+                var receivedMessage = args.Message;
+                if (receivedMessage == null)
+                    return Task.CompletedTask;
+
+                Interlocked.Increment(ref receives);
+
+                return Task.CompletedTask;
+            }
+
+            Task ErrorHandler(ProcessErrorEventArgs args)
+            {
+                return Task.CompletedTask;
+            }
+
+            await processor.StartProcessingAsync().ConfigureAwait(false);
+
+            while (Interlocked.Read(ref receives) < messageCount)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
+            }
+
+            await processor.StopProcessingAsync().ConfigureAwait(false);
+        }
+
         private static async Task Track1Send1MMessages(string connectionString, string queueName)
         {
             var queueClient = new QueueClient(connectionString, queueName);
@@ -146,7 +216,7 @@ namespace Azure.Messaging.ServiceBus.Stress
         {
             var queueClient = new QueueClient(connectionString, queueName, mode);
             long receives = 0;
-            queueClient.RegisterMessageHandler(MessageHandler, new MessageHandlerOptions(ErrorHandler) { AutoComplete = true, MaxConcurrentCalls = 32 });
+            queueClient.RegisterMessageHandler(MessageHandler, new MessageHandlerOptions(ErrorHandler) { AutoComplete = true, MaxConcurrentCalls = 40 });
 
             Task MessageHandler(Message message, CancellationToken token)
             {
@@ -228,6 +298,67 @@ namespace Azure.Messaging.ServiceBus.Stress
                     loopCount = 0;
                 }
             }
+        }
+
+        private static async Task Track1Scenario2SenderPayload(string connectionString, string queueName)
+        {
+            var sender = new MessageSender(connectionString, queueName);
+            var stopwatch = new Stopwatch();
+            var messageTotal = 0;
+            var loopCount = 0;
+            var drainCount = 0;
+
+            stopwatch.Start();
+            while (stopwatch.Elapsed < TimeSpan.FromHours(3))
+            {
+                if ((drainCount + 1) > 1023)
+                {
+                    stopwatch.Stop();
+                    await Track1Drain(connectionString, queueName, drainCount).ConfigureAwait(false);
+                    drainCount = 0;
+                    stopwatch.Start();
+                }
+
+                await sender.SendAsync(new Message(Enumerable.Repeat((byte)1, 1048549).ToArray())).ConfigureAwait(false);
+                loopCount++;
+                messageTotal++;
+                drainCount++;
+
+                if (loopCount >= 50)
+                {
+                    var sendsPerSecond = messageTotal / stopwatch.Elapsed.TotalSeconds;
+                    Console.WriteLine($"Sends per second: {sendsPerSecond}");
+                    loopCount = 0;
+                }
+            }
+        }
+
+        private static async Task Track1Drain(string connectionString, string queueName, int messageCount)
+        {
+            var queueClient = new QueueClient(connectionString, queueName, T1ReceiveMode.ReceiveAndDelete);
+            long receives = 0;
+            queueClient.RegisterMessageHandler(MessageHandler, new MessageHandlerOptions(ErrorHandler) { AutoComplete = true, MaxConcurrentCalls = 40 });
+
+            Task MessageHandler(Message message, CancellationToken token)
+            {
+                if (message == null) return Task.CompletedTask;
+
+                Interlocked.Increment(ref receives);
+
+                return Task.CompletedTask;
+            }
+
+            Task ErrorHandler(ExceptionReceivedEventArgs args)
+            {
+                return Task.CompletedTask;
+            }
+
+            while (Interlocked.Read(ref receives) < messageCount)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
+            }
+
+            await queueClient.CloseAsync().ConfigureAwait(false);
         }
     }
 }
