@@ -17,18 +17,18 @@ namespace Azure.Messaging.ServiceBus.Stress
         private static async Task Main()
         {
             var connectionString = Environment.GetEnvironmentVariable("SERVICEBUS_CONNECTION_STRING");
-            //var queueName = Environment.GetEnvironmentVariable("SERVICEBUS_QUEUE_NAME");
-            var topicName = Environment.GetEnvironmentVariable("SERVICEBUS_TOPIC_NAME");
-            var topicSubscriptionName = Environment.GetEnvironmentVariable("SERVICEBUS_TOPIC_SUBSCRIPTION_NAME");
+            var queueName = Environment.GetEnvironmentVariable("SERVICEBUS_QUEUE_NAME");
+            //var topicName = Environment.GetEnvironmentVariable("SERVICEBUS_TOPIC_NAME");
+            //var topicSubscriptionName = Environment.GetEnvironmentVariable("SERVICEBUS_TOPIC_SUBSCRIPTION_NAME");
 
             var track2Client =  new ServiceBusClient(connectionString);
 
-            //await Track2Send1MMessages(track2Client, queueName).ConfigureAwait(false);
-            //await Track2Scenario1Processor(track2Client, queueName, ReceiveMode.ReceiveAndDelete).ConfigureAwait(false);
+            await Track2Send1MMessages(track2Client, queueName).ConfigureAwait(false);
+            await Track2Scenario1Processor(track2Client, queueName, ReceiveMode.ReceiveAndDelete).ConfigureAwait(false);
             //await Track2Scenario1Receiver(track2Client, queueName, ReceiveMode.ReceiveAndDelete).ConfigureAwait(false);
 
-            await Track2Send1MMessagesTopic(track2Client, topicName).ConfigureAwait(false);
-            await Track2Scenario1TopicProcessor(track2Client, topicName, topicSubscriptionName, ReceiveMode.PeekLock).ConfigureAwait(false);
+            //await Track2Send1MMessagesTopic(track2Client, topicName).ConfigureAwait(false);
+            //await Track2Scenario1TopicProcessor(track2Client, topicName, topicSubscriptionName, ReceiveMode.PeekLock).ConfigureAwait(false);
 
             //await Track2Scenario2Sender(track2Client, queueName).ConfigureAwait(false);
             //await Track2Scenario2SenderPayload(track2Client, queueName).ConfigureAwait(false);
@@ -66,7 +66,7 @@ namespace Azure.Messaging.ServiceBus.Stress
 
         private static async Task Track2Scenario1Processor(ServiceBusClient track2Client, string queueName, ReceiveMode mode)
         {
-            var processor = track2Client.CreateProcessor(queueName, new ServiceBusProcessorOptions { AutoComplete = true, ReceiveMode = mode, MaxConcurrentCalls = 40 });
+            var processor = track2Client.CreateProcessor(queueName, new ServiceBusProcessorOptions { AutoComplete = true, ReceiveMode = mode, MaxConcurrentCalls = 32 });
             long receives = 0;
             processor.ProcessMessageAsync += MessageHandler;
             processor.ProcessErrorAsync += ErrorHandler;
@@ -103,7 +103,7 @@ namespace Azure.Messaging.ServiceBus.Stress
 
         private static async Task Track2Scenario1TopicProcessor(ServiceBusClient track2Client, string topicName, string subscriptionName, ReceiveMode mode)
         {
-            var processor = track2Client.CreateProcessor(topicName, subscriptionName, new ServiceBusProcessorOptions { AutoComplete = true, ReceiveMode = mode, MaxConcurrentCalls = 40 });
+            var processor = track2Client.CreateProcessor(topicName, subscriptionName, new ServiceBusProcessorOptions { AutoComplete = true, ReceiveMode = mode, MaxConcurrentCalls = 32 });
             long receives = 0;
             processor.ProcessMessageAsync += MessageHandler;
             processor.ProcessErrorAsync += ErrorHandler;
@@ -229,7 +229,7 @@ namespace Azure.Messaging.ServiceBus.Stress
 
         private static async Task Track2Drain(ServiceBusClient track2Client, string queueName, int messageCount)
         {
-            var processor = track2Client.CreateProcessor(queueName, new ServiceBusProcessorOptions { ReceiveMode = ReceiveMode.ReceiveAndDelete, MaxConcurrentCalls = 40 });
+            var processor = track2Client.CreateProcessor(queueName, new ServiceBusProcessorOptions { ReceiveMode = ReceiveMode.ReceiveAndDelete, MaxConcurrentCalls = 32 });
             long receives = 0;
             processor.ProcessMessageAsync += MessageHandler;
             processor.ProcessErrorAsync += ErrorHandler;
@@ -284,7 +284,7 @@ namespace Azure.Messaging.ServiceBus.Stress
         {
             var queueClient = new QueueClient(connectionString, queueName, mode);
             long receives = 0;
-            queueClient.RegisterMessageHandler(MessageHandler, new MessageHandlerOptions(ErrorHandler) { AutoComplete = true, MaxConcurrentCalls = 40 });
+            queueClient.RegisterMessageHandler(MessageHandler, new MessageHandlerOptions(ErrorHandler) { AutoComplete = true, MaxConcurrentCalls = 32 });
 
             Task MessageHandler(Message message, CancellationToken token)
             {
@@ -317,7 +317,7 @@ namespace Azure.Messaging.ServiceBus.Stress
         {
             var subscriptionClient = new SubscriptionClient(connectionString, topicName, subscriptionName, mode);
             long receives = 0;
-            subscriptionClient.RegisterMessageHandler(MessageHandler, new MessageHandlerOptions(ErrorHandler) { AutoComplete = true, MaxConcurrentCalls = 40 });
+            subscriptionClient.RegisterMessageHandler(MessageHandler, new MessageHandlerOptions(ErrorHandler) { AutoComplete = true, MaxConcurrentCalls = 32 });
 
             Task MessageHandler(Message message, CancellationToken token)
             {
@@ -439,7 +439,7 @@ namespace Azure.Messaging.ServiceBus.Stress
         {
             var queueClient = new QueueClient(connectionString, queueName, T1ReceiveMode.ReceiveAndDelete);
             long receives = 0;
-            queueClient.RegisterMessageHandler(MessageHandler, new MessageHandlerOptions(ErrorHandler) { AutoComplete = true, MaxConcurrentCalls = 40 });
+            queueClient.RegisterMessageHandler(MessageHandler, new MessageHandlerOptions(ErrorHandler) { AutoComplete = true, MaxConcurrentCalls = 32 });
 
             Task MessageHandler(Message message, CancellationToken token)
             {
