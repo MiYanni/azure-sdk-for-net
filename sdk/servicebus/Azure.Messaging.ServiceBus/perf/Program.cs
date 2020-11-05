@@ -17,23 +17,33 @@ namespace Azure.Messaging.ServiceBus.Stress
         private static async Task Main()
         {
             var connectionString = Environment.GetEnvironmentVariable("SERVICEBUS_CONNECTION_STRING");
-            var queueName = Environment.GetEnvironmentVariable("SERVICEBUS_QUEUE_NAME");
-            //var topicName = Environment.GetEnvironmentVariable("SERVICEBUS_TOPIC_NAME");
+            //var queueName = Environment.GetEnvironmentVariable("SERVICEBUS_QUEUE_NAME");
+            var topicName = Environment.GetEnvironmentVariable("SERVICEBUS_TOPIC_NAME");
+            var topicSubscriptionName = Environment.GetEnvironmentVariable("SERVICEBUS_TOPIC_SUBSCRIPTION_NAME");
 
-            //var track2Client =  new ServiceBusClient(connectionString);
+            var track2Client =  new ServiceBusClient(connectionString);
+
             //await Track2Send1MMessages(track2Client, queueName).ConfigureAwait(false);
             //await Track2Scenario1Processor(track2Client, queueName, ReceiveMode.ReceiveAndDelete).ConfigureAwait(false);
             //await Track2Scenario1Receiver(track2Client, queueName, ReceiveMode.ReceiveAndDelete).ConfigureAwait(false);
 
+            await Track2Send1MMessagesTopic(track2Client, topicName).ConfigureAwait(false);
+            await Track2Scenario1TopicProcessor(track2Client, topicName, topicSubscriptionName, ReceiveMode.PeekLock).ConfigureAwait(false);
+
             //await Track2Scenario2Sender(track2Client, queueName).ConfigureAwait(false);
             //await Track2Scenario2SenderPayload(track2Client, queueName).ConfigureAwait(false);
+
+            ////////////////////////////////////////////////////////////////////////////////////
 
             //await Track1Send1MMessages(connectionString, queueName).ConfigureAwait(false);
             //await Track1Scenario1Processor(connectionString, queueName, T1ReceiveMode.ReceiveAndDelete).ConfigureAwait(false);
             //await Track1Scenario1Receiver(connectionString, queueName, T1ReceiveMode.ReceiveAndDelete).ConfigureAwait(false);
 
+            //await Track1Send1MMessagesTopic(connectionString, topicName).ConfigureAwait(false);
+            //await Track1Scenario1TopicProcessor(connectionString, topicName, topicSubscriptionName, T1ReceiveMode.PeekLock).ConfigureAwait(false);
+
             //await Track1Scenario2Sender(connectionString, queueName).ConfigureAwait(false);
-            await Track1Scenario2SenderPayload(connectionString, queueName).ConfigureAwait(false);
+            //await Track1Scenario2SenderPayload(connectionString, queueName).ConfigureAwait(false);
         }
 
         private static async Task Track2Send1MMessages(ServiceBusClient track2Client, string queueName)
@@ -45,9 +55,18 @@ namespace Azure.Messaging.ServiceBus.Stress
             }
         }
 
+        private static async Task Track2Send1MMessagesTopic(ServiceBusClient track2Client, string topicName)
+        {
+            var sender = track2Client.CreateSender(topicName);
+            foreach (var _ in Enumerable.Range(0, 100))
+            {
+                await sender.SendMessagesAsync(Enumerable.Range(0, 10000).Select(i => new ServiceBusMessage())).ConfigureAwait(false);
+            }
+        }
+
         private static async Task Track2Scenario1Processor(ServiceBusClient track2Client, string queueName, ReceiveMode mode)
         {
-            var processor = track2Client.CreateProcessor(queueName, new ServiceBusProcessorOptions { ReceiveMode = mode, MaxConcurrentCalls = 40 });
+            var processor = track2Client.CreateProcessor(queueName, new ServiceBusProcessorOptions { AutoComplete = true, ReceiveMode = mode, MaxConcurrentCalls = 40 });
             long receives = 0;
             processor.ProcessMessageAsync += MessageHandler;
             processor.ProcessErrorAsync += ErrorHandler;
@@ -56,6 +75,44 @@ namespace Azure.Messaging.ServiceBus.Stress
             {
                 var receivedMessage = args.Message;
                 if (receivedMessage == null) return Task.CompletedTask;
+
+                Interlocked.Increment(ref receives);
+
+                return Task.CompletedTask;
+            }
+
+            Task ErrorHandler(ProcessErrorEventArgs args)
+            {
+                return Task.CompletedTask;
+            }
+
+            await processor.StartProcessingAsync().ConfigureAwait(false);
+
+            var loopCount = 0;
+            while (Interlocked.Read(ref receives) < 1000000)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+                loopCount++;
+
+                var receivesPerSecond = (double)Interlocked.Read(ref receives) / (loopCount * 5);
+                Console.WriteLine($"Receives per second: {receivesPerSecond}");
+            }
+
+            await processor.StopProcessingAsync().ConfigureAwait(false);
+        }
+
+        private static async Task Track2Scenario1TopicProcessor(ServiceBusClient track2Client, string topicName, string subscriptionName, ReceiveMode mode)
+        {
+            var processor = track2Client.CreateProcessor(topicName, subscriptionName, new ServiceBusProcessorOptions { AutoComplete = true, ReceiveMode = mode, MaxConcurrentCalls = 40 });
+            long receives = 0;
+            processor.ProcessMessageAsync += MessageHandler;
+            processor.ProcessErrorAsync += ErrorHandler;
+
+            Task MessageHandler(ProcessMessageEventArgs args)
+            {
+                var receivedMessage = args.Message;
+                if (receivedMessage == null)
+                    return Task.CompletedTask;
 
                 Interlocked.Increment(ref receives);
 
@@ -213,6 +270,16 @@ namespace Azure.Messaging.ServiceBus.Stress
             await queueClient.CloseAsync().ConfigureAwait(false);
         }
 
+        private static async Task Track1Send1MMessagesTopic(string connectionString, string topicName)
+        {
+            var topicClient = new TopicClient(connectionString, topicName);
+            foreach (var _ in Enumerable.Range(0, 100))
+            {
+                await topicClient.SendAsync(Enumerable.Range(0, 10000).Select(i => new Message()).ToList()).ConfigureAwait(false);
+            }
+            await topicClient.CloseAsync().ConfigureAwait(false);
+        }
+
         private static async Task Track1Scenario1Processor(string connectionString, string queueName, T1ReceiveMode mode)
         {
             var queueClient = new QueueClient(connectionString, queueName, mode);
@@ -244,6 +311,40 @@ namespace Azure.Messaging.ServiceBus.Stress
             }
 
             await queueClient.CloseAsync().ConfigureAwait(false);
+        }
+
+        private static async Task Track1Scenario1TopicProcessor(string connectionString, string topicName, string subscriptionName, T1ReceiveMode mode)
+        {
+            var subscriptionClient = new SubscriptionClient(connectionString, topicName, subscriptionName, mode);
+            long receives = 0;
+            subscriptionClient.RegisterMessageHandler(MessageHandler, new MessageHandlerOptions(ErrorHandler) { AutoComplete = true, MaxConcurrentCalls = 40 });
+
+            Task MessageHandler(Message message, CancellationToken token)
+            {
+                if (message == null)
+                    return Task.CompletedTask;
+
+                Interlocked.Increment(ref receives);
+
+                return Task.CompletedTask;
+            }
+
+            Task ErrorHandler(ExceptionReceivedEventArgs args)
+            {
+                return Task.CompletedTask;
+            }
+
+            var loopCount = 0;
+            while (Interlocked.Read(ref receives) < 1000000)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+                loopCount++;
+
+                var receivesPerSecond = (double)Interlocked.Read(ref receives) / (loopCount * 5);
+                Console.WriteLine($"Receives per second: {receivesPerSecond}");
+            }
+
+            await subscriptionClient.CloseAsync().ConfigureAwait(false);
         }
 
         private static async Task Track1Scenario1Receiver(string connectionString, string queueName, T1ReceiveMode mode)
