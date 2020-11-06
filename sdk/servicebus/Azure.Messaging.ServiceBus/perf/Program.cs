@@ -21,10 +21,10 @@ namespace Azure.Messaging.ServiceBus.Stress
             //var topicName = Environment.GetEnvironmentVariable("SERVICEBUS_TOPIC_NAME");
             //var topicSubscriptionName = Environment.GetEnvironmentVariable("SERVICEBUS_TOPIC_SUBSCRIPTION_NAME");
 
-            var track2Client =  new ServiceBusClient(connectionString);
+            //var track2Client =  new ServiceBusClient(connectionString);
 
-            await Track2Send1MMessages(track2Client, queueName).ConfigureAwait(false);
-            await Track2Scenario1Processor(track2Client, queueName, ReceiveMode.ReceiveAndDelete).ConfigureAwait(false);
+            //await Track2Send1MMessages(track2Client, queueName).ConfigureAwait(false);
+            //await Track2Scenario1Processor(track2Client, queueName, ReceiveMode.PeekLock).ConfigureAwait(false);
             //await Track2Scenario1Receiver(track2Client, queueName, ReceiveMode.ReceiveAndDelete).ConfigureAwait(false);
 
             //await Track2Send1MMessagesTopic(track2Client, topicName).ConfigureAwait(false);
@@ -35,8 +35,8 @@ namespace Azure.Messaging.ServiceBus.Stress
 
             ////////////////////////////////////////////////////////////////////////////////////
 
-            //await Track1Send1MMessages(connectionString, queueName).ConfigureAwait(false);
-            //await Track1Scenario1Processor(connectionString, queueName, T1ReceiveMode.ReceiveAndDelete).ConfigureAwait(false);
+            await Track1Send1MMessages(connectionString, queueName).ConfigureAwait(false);
+            await Track1Scenario1Processor(connectionString, queueName, T1ReceiveMode.PeekLock).ConfigureAwait(false);
             //await Track1Scenario1Receiver(connectionString, queueName, T1ReceiveMode.ReceiveAndDelete).ConfigureAwait(false);
 
             //await Track1Send1MMessagesTopic(connectionString, topicName).ConfigureAwait(false);
@@ -203,7 +203,7 @@ namespace Azure.Messaging.ServiceBus.Stress
             var drainCount = 0;
 
             stopwatch.Start();
-            while (stopwatch.Elapsed < TimeSpan.FromHours(3))
+            while (stopwatch.Elapsed < TimeSpan.FromHours(1))
             {
                 if ((drainCount + 1) > 1023)
                 {
@@ -411,7 +411,7 @@ namespace Azure.Messaging.ServiceBus.Stress
             var drainCount = 0;
 
             stopwatch.Start();
-            while (stopwatch.Elapsed < TimeSpan.FromHours(3))
+            while (stopwatch.Elapsed < TimeSpan.FromHours(1))
             {
                 if ((drainCount + 1) > 1023)
                 {
