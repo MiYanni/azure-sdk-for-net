@@ -70,7 +70,7 @@ namespace Azure.Messaging.ServiceBus.Stress
             await using var processor = client.CreateProcessor(Options.QueueName, new ServiceBusProcessorOptions
             {
                 MaxConcurrentCalls = 10,
-                ReceiveMode = ReceiveMode.ReceiveAndDelete
+                ReceiveMode = ServiceBusReceiveMode.ReceiveAndDelete
             });
 #pragma warning restore AZC0100 // ConfigureAwait(false) must be used.
             processor.ProcessMessageAsync += MessageHandler;

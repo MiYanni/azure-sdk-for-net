@@ -29,7 +29,7 @@ namespace Azure.Messaging.ServiceBus.Stress
             await using var sender = client.CreateSender(Options.QueueName);
             await using var receiver = client.CreateReceiver(Options.QueueName, new ServiceBusReceiverOptions
             {
-                ReceiveMode = ReceiveMode.ReceiveAndDelete
+                ReceiveMode = ServiceBusReceiveMode.ReceiveAndDelete
             });
 #pragma warning restore AZC0100 // ConfigureAwait(false) must be used.
 
